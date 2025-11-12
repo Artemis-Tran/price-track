@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Price Tracker</title>
+    <style>
+      body { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 12px; width: 320px; }
+      button { padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; background: #f7f7f7; cursor: pointer; }
+      button:hover { background: #eee; }
+      .row { margin-top: 10px; }
+      .capture { white-space: pre-wrap; background: #fafafa; border: 1px solid #eee; padding: 8px; border-radius: 8px; max-height: 160px; overflow: auto; }
+      .muted { color: #666; }
+      .ok { color: #0a7a3b; font-weight: 600; }
+      .error { color: #b00020; font-weight: 600; }
+      label { display: block; font-weight: 600; margin-top: 8px; }
+      input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ccc; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <h3 style="margin-top:0">Price Tracker</h3>
+
+    <div class="row">
+      <button id="startPickerButton">Select price element</button>
+      <span id="statusText" class="muted" style="margin-left:8px;"></span>
+    </div>
+
+    <div class="row">
+      <label>Captured price text</label>
+      <div id="capturedText" class="capture muted">Nothing captured yet.</div>
+    </div>
+
+    <div class="row">
+      <label>CSS selector</label>
+      <div id="capturedCss" class="capture muted">—</div>
+    </div>
+
+    <div class="row">
+      <label>XPath</label>
+      <div id="capturedXpath" class="capture muted">—</div>
+    </div>
+
+    <div class="row">
+      <label>Notes (optional)</label>
+      <input id="userNotesInput" type="text" placeholder="e.g., 'MacBook Pro 14″ Space Gray'" />
+    </div>
+
+    <div class="row">
+      <button id="saveTargetButton" disabled>Save target</button>
+      <span id="saveStatusText" class="muted" style="margin-left:8px;"></span>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

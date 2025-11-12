@@ -1,0 +1,16 @@
+{
+  "name": "price-tracker-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "clean": "rm -rf dist",
+    "dev": "NODE_ENV=development node esbuild.config.mjs --watch"
+    },
+  "devDependencies": {
+    "@types/chrome": "^0.0.269",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

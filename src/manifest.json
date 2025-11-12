@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Generalized Price Tracker (TS Starter)",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "Price Tracker",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["scripting", "activeTab", "tabs", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "icons": {
+    "16": "assets/icons/icon16.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
