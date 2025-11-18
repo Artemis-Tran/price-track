@@ -8,6 +8,8 @@ const capturedTextElement = document.getElementById("capturedText") as HTMLDivEl
 const capturedCssElement = document.getElementById("capturedCss") as HTMLDivElement;
 const capturedXpathElement = document.getElementById("capturedXpath") as HTMLDivElement;
 const userNotesInput = document.getElementById("userNotesInput") as HTMLInputElement;
+const trackedItemsList = document.getElementById("trackedItemsList") as HTMLDivElement;
+const clearAllButton = document.getElementById("clearAllButton") as HTMLButtonElement;
 
 let lastCapture: PricePickPayload | null = null;
 
@@ -22,6 +24,31 @@ async function ensureContentScript(tabId: number): Promise<void> {
   } catch {
     // If you removed content_scripts from manifest, uncomment to inject on demand:
     // await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+  }
+}
+
+async function renderTrackedItems() {
+  const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
+    trackedItems?: TrackedItem[];
+  };
+  trackedItemsList.innerHTML = "";
+
+  if (!trackedItems || trackedItems.length === 0) {
+    trackedItemsList.innerHTML = '<div class="muted" style="padding: 8px;">No items tracked yet.</div>';
+    return;
+  }
+
+  for (const item of trackedItems) {
+    const itemElement = document.createElement("div");
+    itemElement.className = "tracked-item";
+    itemElement.innerHTML = `
+      <div class="item-info">
+        <a href="${item.pageUrl}" target="_blank">${item.userNotes || "Untitled"}</a>
+        <div>${item.priceText}</div>
+      </div>
+      <button class="delete-btn" data-id="${item.id}">Delete</button>
+    `;
+    trackedItemsList.appendChild(itemElement);
   }
 }
 
@@ -65,21 +92,46 @@ saveTargetButton.addEventListener("click", async () => {
     userNotes: userNotesInput.value?.trim() ?? "",
     savedAtIso: new Date().toISOString(),
     id:
-      crypto.getRandomValues(new Uint32Array(1))[0].toString(16) +
+      crypto.getRandomValues(new Uint32Array(1))[0]!.toString(16) + // fix later undefined
       "-" +
-      Date.now().toString()
+      Date.now().toString(),
   };
 
   try {
-    const existing = (await chrome.storage.local.get(["trackedItems"])).trackedItems as TrackedItem[] | undefined;
-    const list = Array.isArray(existing) ? existing : [];
+    const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
+      trackedItems?: TrackedItem[];
+    };
+    const list = Array.isArray(trackedItems) ? trackedItems : [];
     list.push(annotatedRecord);
     await chrome.storage.local.set({ trackedItems: list });
     saveStatusText.textContent = "Saved.";
     saveStatusText.className = "ok";
     saveTargetButton.disabled = true;
+    await renderTrackedItems();
   } catch {
     saveStatusText.textContent = "Save failed.";
     saveStatusText.className = "error";
   }
 });
+
+clearAllButton.addEventListener("click", async () => {
+  await chrome.storage.local.set({ trackedItems: [] });
+  await renderTrackedItems();
+});
+
+trackedItemsList.addEventListener("click", async (event) => {
+  const target = event.target as HTMLButtonElement;
+  if (target.classList.contains("delete-btn")) {
+    const id = target.dataset.id;
+    if (!id) return;
+    const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
+      trackedItems?: TrackedItem[];
+    };
+    if (!trackedItems) return;
+    const newList = trackedItems.filter((item) => item.id !== id);
+    await chrome.storage.local.set({ trackedItems: newList });
+    await renderTrackedItems();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", renderTrackedItems);

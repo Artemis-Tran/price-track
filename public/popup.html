@@ -14,6 +14,13 @@
       .error { color: #b00020; font-weight: 600; }
       label { display: block; font-weight: 600; margin-top: 8px; }
       input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ccc; border-radius: 6px; }
+      #trackedItemsContainer { margin-top: 16px; }
+      .tracked-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+      .tracked-item:last-child { border-bottom: none; }
+      .item-info { flex-grow: 1; }
+      .item-info a { color: #007bff; text-decoration: none; }
+      .item-info a:hover { text-decoration: underline; }
+      .delete-btn { padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; }
     </style>
   </head>
   <body>
@@ -47,6 +54,14 @@
     <div class="row">
       <button id="saveTargetButton" disabled>Save target</button>
       <span id="saveStatusText" class="muted" style="margin-left:8px;"></span>
+    </div>
+
+    <div id="trackedItemsContainer">
+      <h4 style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
+        Tracked Items
+        <button id="clearAllButton" style="float: right;">Clear All</button>
+      </h4>
+      <div id="trackedItemsList"></div>
     </div>
 
     <script type="module" src="popup.js"></script>
