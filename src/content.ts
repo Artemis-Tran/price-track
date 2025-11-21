@@ -54,6 +54,7 @@ function getCssSelector(element: Element): string {
     return `#${cssEscapeSimple(el.id)}`;
   }
   const parts: string[] = [];
+  let bestUnique: string[] | null = null;
   let current: Element | null = el;
   let depth = 0;
 
@@ -81,13 +82,16 @@ function getCssSelector(element: Element): string {
     const partial = parts.join(" > ");
     try {
       if (document.querySelectorAll(partial).length === 1) {
-        return partial;
+        bestUnique = parts.slice();
       }
     } catch {
       // ignore invalid intermediate selectors
     }
     current = parent;
     depth++;
+  }
+  if (bestUnique) {
+    return bestUnique.join(" > ");
   }
   return parts.join(" > ");
 }
@@ -157,6 +161,14 @@ function onClick(event: MouseEvent): void {
     outerHtmlSnippet: getOuterHtmlSnippet(element),
     capturedAtIso: new Date().toISOString()
   };
+
+  // Debug log to validate selector/xpath correctness while testing
+  console.log("[price-track] picked element", {
+    cssSelector: payload.cssSelector,
+    xPath: payload.xPath,
+    priceText: payload.priceText,
+    pageUrl: payload.pageUrl
+  });
 
   chrome.runtime.sendMessage({ type: "PRICE_PICKED", payload } as RuntimeMessage);
 }
