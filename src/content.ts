@@ -66,10 +66,10 @@ function getCssSelector(element: Element): string {
     if (classList.length) {
       selector += "." + classList.map(cssEscapeSimple).join(".");
     }
-    const parent = current.parentElement;
+    const parent: Element | null = current.parentElement;
     if (parent) {
       const sameTagSiblings = Array.from(parent.children).filter(
-        (child) => (child as Element).tagName === current.tagName
+        (child) => (child as Element).tagName === current!.tagName
       );
       if (sameTagSiblings.length > 1) {
         const index = sameTagSiblings.indexOf(current as HTMLElement) + 1;

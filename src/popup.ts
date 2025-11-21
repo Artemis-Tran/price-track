@@ -1,17 +1,11 @@
-import type { PricePickPayload, RuntimeMessage, TrackedItem } from "./types";
+import type { RuntimeMessage, TrackedItem } from "./types";
 
-const startPickerButton = document.getElementById("startPickerButton") as HTMLButtonElement;
-const saveTargetButton = document.getElementById("saveTargetButton") as HTMLButtonElement;
-const statusText = document.getElementById("statusText") as HTMLSpanElement;
-const saveStatusText = document.getElementById("saveStatusText") as HTMLSpanElement;
-const capturedTextElement = document.getElementById("capturedText") as HTMLDivElement;
-const capturedCssElement = document.getElementById("capturedCss") as HTMLDivElement;
-const capturedXpathElement = document.getElementById("capturedXpath") as HTMLDivElement;
-const userNotesInput = document.getElementById("userNotesInput") as HTMLInputElement;
-const trackedItemsList = document.getElementById("trackedItemsList") as HTMLDivElement;
-const clearAllButton = document.getElementById("clearAllButton") as HTMLButtonElement;
+const startPickerButton = document.getElementById("startPickerButton") as HTMLButtonElement | null;
+const statusText = document.getElementById("statusText") as HTMLSpanElement | null;
+const userNotesInput = document.getElementById("userNotesInput") as HTMLInputElement | null;
+const trackedItemsList = document.getElementById("trackedItemsList") as HTMLDivElement | null;
+const clearAllButton = document.getElementById("clearAllButton") as HTMLButtonElement | null;
 
-let lastCapture: PricePickPayload | null = null;
 
 async function getActiveTabId(): Promise<number | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -21,13 +15,17 @@ async function getActiveTabId(): Promise<number | undefined> {
 async function ensureContentScript(tabId: number): Promise<void> {
   try {
     await chrome.tabs.sendMessage(tabId, { type: "PING_PRICE_PICKER" } as RuntimeMessage);
+    return;
   } catch {
-    // If you removed content_scripts from manifest, uncomment to inject on demand:
-    // await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    // Try to inject on demand if the content script is not present yet.
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    // Verify the injection succeeded; this will throw if it still fails.
+    await chrome.tabs.sendMessage(tabId, { type: "PING_PRICE_PICKER" } as RuntimeMessage);
   }
 }
 
 async function renderTrackedItems() {
+  if (!trackedItemsList) return;
   const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
     trackedItems?: TrackedItem[];
   };
@@ -52,74 +50,47 @@ async function renderTrackedItems() {
   }
 }
 
-startPickerButton.addEventListener("click", async () => {
-  statusText.textContent = "Activating picker… Press Esc to cancel.";
-  saveStatusText.textContent = "";
+startPickerButton?.addEventListener("click", async () => {
+  if (statusText) statusText.textContent = "Activating picker… Press Esc to cancel.";
   const tabId = await getActiveTabId();
   if (!tabId) {
-    statusText.textContent = "No active tab.";
+    if (statusText) statusText.textContent = "No active tab.";
     return;
   }
-  await ensureContentScript(tabId);
-  await chrome.tabs.sendMessage(tabId, { type: "START_PRICE_PICK" } as RuntimeMessage);
+  try {
+    await chrome.storage.local.set({ pendingUserNotes: userNotesInput?.value?.trim() ?? "" });
+    await ensureContentScript(tabId);
+    await chrome.tabs.sendMessage(tabId, { type: "START_PRICE_PICK" } as RuntimeMessage);
+  } catch {
+    if (statusText) {
+      statusText.textContent = "Failed to start picker. Make sure the extension is allowed on this site.";
+    }
+  }
 });
 
 chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
   if (message.type === "PRICE_PICKED") {
-    statusText.textContent = "Captured.";
-    const { priceText, cssSelector, xPath } = message.payload;
-    lastCapture = message.payload;
+    if (statusText) statusText.textContent = "Captured. Saving…";
+  }
 
-    capturedTextElement.textContent = priceText || "(empty)";
-    capturedTextElement.classList.toggle("muted", !priceText);
-    capturedCssElement.textContent = cssSelector || "(none)";
-    capturedCssElement.classList.toggle("muted", !cssSelector);
-    capturedXpathElement.textContent = xPath || "(none)";
-    capturedXpathElement.classList.toggle("muted", !xPath);
+  if (message.type === "TRACKED_ITEM_SAVED") {
+    const { item } = message;
+    if (userNotesInput) userNotesInput.value = item.userNotes;
+    if (statusText) statusText.textContent = "Saved to tracked items.";
 
-    saveTargetButton.disabled = false;
+    renderTrackedItems();
   }
   if (message.type === "PRICE_PICK_CANCELLED") {
-    statusText.textContent = "Cancelled.";
+    if (statusText) statusText.textContent = "Cancelled.";
   }
 });
 
-saveTargetButton.addEventListener("click", async () => {
-  if (!lastCapture) return;
-
-  const annotatedRecord: TrackedItem = {
-    ...lastCapture,
-    userNotes: userNotesInput.value?.trim() ?? "",
-    savedAtIso: new Date().toISOString(),
-    id:
-      crypto.getRandomValues(new Uint32Array(1))[0]!.toString(16) + // fix later undefined
-      "-" +
-      Date.now().toString(),
-  };
-
-  try {
-    const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
-      trackedItems?: TrackedItem[];
-    };
-    const list = Array.isArray(trackedItems) ? trackedItems : [];
-    list.push(annotatedRecord);
-    await chrome.storage.local.set({ trackedItems: list });
-    saveStatusText.textContent = "Saved.";
-    saveStatusText.className = "ok";
-    saveTargetButton.disabled = true;
-    await renderTrackedItems();
-  } catch {
-    saveStatusText.textContent = "Save failed.";
-    saveStatusText.className = "error";
-  }
-});
-
-clearAllButton.addEventListener("click", async () => {
+clearAllButton?.addEventListener("click", async () => {
   await chrome.storage.local.set({ trackedItems: [] });
   await renderTrackedItems();
 });
 
-trackedItemsList.addEventListener("click", async (event) => {
+trackedItemsList?.addEventListener("click", async (event) => {
   const target = event.target as HTMLButtonElement;
   if (target.classList.contains("delete-btn")) {
     const id = target.dataset.id;
