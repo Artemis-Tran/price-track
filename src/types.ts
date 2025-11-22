@@ -1,5 +1,7 @@
 export type PricePickPayload = {
   priceText: string;
+  productName: string;
+  imageUrl: string;
   cssSelector: string;
   xPath: string;
   pageUrl: string;

@@ -132,6 +132,118 @@ function extractPriceText(element: Element): string {
   return m ? m[0] : raw;
 }
 
+function resolveUrlMaybe(url: string | undefined | null): string {
+  if (!url) return "";
+  try {
+    return new URL(url, location.href).toString();
+  } catch {
+    return url;
+  }
+}
+
+function parseJsonLdProduct(): { name?: string; image?: string } | null {
+  const scripts = Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]'));
+  for (const script of scripts) {
+    try {
+      const data = JSON.parse(script.textContent || "null");
+      if (!data) continue;
+      const maybeArray = Array.isArray(data) ? data : [data];
+      for (const entry of maybeArray) {
+        if (!entry || typeof entry !== "object") continue;
+        if (entry["@type"] === "Product" || (Array.isArray(entry["@type"]) && entry["@type"].includes("Product"))) {
+          const image = Array.isArray(entry.image) ? entry.image[0] : entry.image;
+          return { name: entry.name, image };
+        }
+      }
+    } catch {
+      // ignore invalid JSON-LD
+    }
+  }
+  return null;
+}
+
+function getOgMetaContent(property: string): string {
+  const el = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
+  return (el && el.getAttribute("content")) || "";
+}
+
+function findCandidateContainer(element: Element): Element | null {
+  const priorityClasses = ["product", "item", "card", "listing", "entry", "detail"];
+  let current: Element | null = element;
+  let depth = 0;
+  while (current && depth < 6) {
+    const tag = current.tagName.toLowerCase();
+    const classHit = priorityClasses.some((c) => current!.className && current!.className.toLowerCase().includes(c));
+    if (classHit || tag === "article" || tag === "li" || tag === "section") {
+      return current;
+    }
+    current = current.parentElement;
+    depth++;
+  }
+  return element.parentElement;
+}
+
+function pickProductName(element: Element): string {
+  const jsonLd = parseJsonLdProduct();
+  if (jsonLd?.name) return String(jsonLd.name).trim();
+
+  const ogTitle = getOgMetaContent("og:title").trim();
+  if (ogTitle) return ogTitle;
+
+  const container = findCandidateContainer(element) || document.body;
+  const nameCandidates = Array.from(
+    container.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[itemprop="name"],.title,.product-title,.product_name')
+  );
+  for (const node of nameCandidates) {
+    const text = (node.innerText || node.textContent || "").trim();
+    if (text) return text;
+  }
+
+  const docTitle = (document.title || "").trim();
+  return docTitle;
+}
+
+function distance(a: DOMRect, b: DOMRect): number {
+  const ax = a.left + a.width / 2;
+  const ay = a.top + a.height / 2;
+  const bx = b.left + b.width / 2;
+  const by = b.top + b.height / 2;
+  const dx = ax - bx;
+  const dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function pickProductImage(element: Element): string {
+  const jsonLd = parseJsonLdProduct();
+  if (jsonLd?.image) return resolveUrlMaybe(jsonLd.image as string);
+
+  const ogImage = getOgMetaContent("og:image");
+  if (ogImage) return resolveUrlMaybe(ogImage);
+
+  const container = findCandidateContainer(element) || document.body;
+  const images = Array.from(container.querySelectorAll<HTMLImageElement>("img")).filter((img) => {
+    const { width, height } = img.getBoundingClientRect();
+    return width >= 40 && height >= 40;
+  });
+  if (!images.length) return "";
+  const priceRect = element.getBoundingClientRect();
+  let best: { img: HTMLImageElement; score: number } | null = null;
+  for (const img of images) {
+    const rect = img.getBoundingClientRect();
+    const dist = distance(priceRect, rect);
+    const area = rect.width * rect.height;
+    // favor closer images; subtract a small area factor to prefer larger images at similar distance
+    const score = dist - Math.min(area, 50000) / 10000;
+    if (!best || score < best.score) {
+      best = { img, score };
+    }
+  }
+  if (best?.img) {
+    return resolveUrlMaybe(best.img.currentSrc || best.img.src);
+  }
+  return "";
+}
+
 function getOuterHtmlSnippet(element: Element, maxLength = 800): string {
   const html = (element as HTMLElement).outerHTML ?? "";
   return html.length > maxLength ? html.slice(0, maxLength) + "…(truncated)" : html;
@@ -155,6 +267,8 @@ function onClick(event: MouseEvent): void {
 
   const payload: PricePickPayload = {
     priceText: extractPriceText(element),
+    productName: pickProductName(element),
+    imageUrl: pickProductImage(element),
     cssSelector: getCssSelector(element),
     xPath: getXPath(element),
     pageUrl: location.href,
@@ -164,6 +278,8 @@ function onClick(event: MouseEvent): void {
 
   // Debug log to validate selector/xpath correctness while testing
   console.log("[price-track] picked element", {
+    productName: payload.productName,
+    imageUrl: payload.imageUrl,
     cssSelector: payload.cssSelector,
     xPath: payload.xPath,
     priceText: payload.priceText,

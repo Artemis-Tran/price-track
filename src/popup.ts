@@ -41,7 +41,7 @@ async function renderTrackedItems() {
     itemElement.className = "tracked-item";
     itemElement.innerHTML = `
       <div class="item-info">
-        <a href="${item.pageUrl}" target="_blank">${item.userNotes || "Untitled"}</a>
+        <a href="${item.pageUrl}" target="_blank">${item.productName || "Untitled"}</a>
         <div>${item.priceText}</div>
       </div>
       <button class="delete-btn" data-id="${item.id}">Delete</button>
