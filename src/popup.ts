@@ -41,8 +41,13 @@ async function renderTrackedItems() {
     itemElement.className = "tracked-item";
     itemElement.innerHTML = `
       <div class="item-info">
-        <a href="${item.pageUrl}" target="_blank">${item.productName || "Untitled"}</a>
-        <div>${item.priceText}</div>
+        <div class="item-main">
+          ${item.imageUrl ? `<img class="thumb" src="${item.imageUrl}" alt="" />` : ""}
+          <div class="meta">
+            <a href="${item.pageUrl}" target="_blank">${item.productName || "Untitled"}</a>
+            <div>${item.priceText}</div>
+          </div>
+        </div>
       </div>
       <button class="delete-btn" data-id="${item.id}">Delete</button>
     `;
