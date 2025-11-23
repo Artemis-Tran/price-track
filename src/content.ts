@@ -126,10 +126,15 @@ function getXPath(element: Element): string {
 
 function extractPriceText(element: Element): string {
   const raw = ((element as HTMLElement).innerText || element.textContent || "").trim();
-  const m = raw.match(
-    /([€£¥₹]|US?\$)\s?\d[\d,]*(?:\.\d{2})?|\d[\d,]*(?:\.\d{2})?\s?(USD|EUR|GBP|JPY|INR)/i
-  );
-  return m ? m[0] : raw;
+  const symbolMatch = raw.match(/([€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/);
+  if (symbolMatch?.[0]) {
+    return symbolMatch[0].replace(/\s+/g, "");
+  }
+  const codeMatch = raw.match(/\d[\d,]*(?:\.\d{2})?\s*(USD|EUR|GBP|JPY|INR)/i);
+  if (codeMatch?.[0]) {
+    return codeMatch[0].replace(/\s+/g, "");
+  }
+  return raw.replace(/\s+/g, "");
 }
 
 function resolveUrlMaybe(url: string | undefined | null): string {
