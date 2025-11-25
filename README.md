@@ -30,7 +30,6 @@ A full-stack price tracking solution designed to monitor product prices across v
 *   **Pandas:** Used for convenient handling and display of CSV data.
 *   **python-dotenv:** For managing environment variables (e.g., Slack webhook).
 *   **`kernel` (Environment-Specific):** An assumed environment-specific component for browser interaction.
-*   **`requests` (Optional):** For sending HTTP requests to Slack webhooks.
 
 ## Setup and Installation
 
