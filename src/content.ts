@@ -129,6 +129,12 @@ function getXPath(element: Element): string {
   return "/" + parts.join("/");
 }
 
+function isValidPrice(text: string): boolean {
+  const symbolMatch = /([$€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/.test(text);
+  const codeMatch = /\d[\d,]*(?:\.\d{2})?\s*(USD|EUR|GBP|JPY|INR)/i.test(text);
+  return symbolMatch || codeMatch;
+}
+
 function extractPriceText(element: Element): string {
   const raw = ((element as HTMLElement).innerText || element.textContent || "").trim();
   const symbolMatch = raw.match(/([€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/);
@@ -273,10 +279,15 @@ function onClick(event: MouseEvent): void {
   event.stopImmediatePropagation?.();
 
   const element = event.target as Element;
+  const priceText = extractPriceText(element);
+  if (!isValidPrice(priceText)) {
+    alert("Please select a valid price element.");
+    return;
+  }
   cleanupPicker();
 
   const payload: PricePickPayload = {
-    priceText: extractPriceText(element),
+    priceText: priceText,
     productName: truncate(pickProductName(element), 70),
     imageUrl: pickProductImage(element),
     cssSelector: getCssSelector(element),
