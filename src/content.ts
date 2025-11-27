@@ -3,6 +3,11 @@ import type { RuntimeMessage, PricePickPayload } from "./types";
 let pickerActive = false;
 let hoverOverlay: HTMLDivElement | null = null;
 
+function truncate(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  return str.slice(0, maxLength) + "...";
+}
+
 function createHoverOverlay(): HTMLDivElement {
   const overlay = document.createElement("div");
   overlay.id = "__price_picker_overlay__";
@@ -272,7 +277,7 @@ function onClick(event: MouseEvent): void {
 
   const payload: PricePickPayload = {
     priceText: extractPriceText(element),
-    productName: pickProductName(element),
+    productName: truncate(pickProductName(element), 70),
     imageUrl: pickProductImage(element),
     cssSelector: getCssSelector(element),
     xPath: getXPath(element),
