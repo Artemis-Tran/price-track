@@ -1,46 +1,162 @@
 <!doctype html>
 <html>
   <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-g" />
     <title>Price Tracker</title>
     <style>
-      body { font: 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 12px; width: 320px; }
-      button { padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; background: #f7f7f7; cursor: pointer; }
-      button:hover { background: #eee; }
-      .row { margin-top: 10px; }
-      .capture { white-space: pre-wrap; background: #fafafa; border: 1px solid #eee; padding: 8px; border-radius: 8px; max-height: 160px; overflow: auto; }
-      .muted { color: #666; }
-      .ok { color: #0a7a3b; font-weight: 600; }
-      .error { color: #b00020; font-weight: 600; }
-      label { display: block; font-weight: 600; margin-top: 8px; }
-      input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ccc; border-radius: 6px; }
-      #trackedItemsContainer { margin-top: 16px; }
-      .tracked-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
-      .tracked-item:last-child { border-bottom: none; }
-      .item-info { flex-grow: 1; }
-      .item-main { display: flex; align-items: center; gap: 8px; }
-      .meta { display: flex; flex-direction: column; }
-      .item-info a { color: #007bff; text-decoration: none; }
-      .item-info a:hover { text-decoration: underline; }
-      .delete-btn { padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; }
-      .delete-btn:hover { background: #d7372c; }
-      .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; background: #fafafa; }
+      body {
+        font: 14px "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        width: 350px;
+        background-color: #f9f9f9;
+        color: #333;
+      }
+      .header {
+        background-color: #fff;
+        padding: 16px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      button {
+        border-radius: 8px;
+        border: 1px solid transparent;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+      }
+      #startPickerButton {
+        background-color: #ff6f00;
+        color: white;
+        border: none;
+      }
+      #startPickerButton:hover {
+        background-color: #ff8f00;
+      }
+      .content {
+        padding: 16px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      #statusText {
+        color: #666;
+      }
+      #trackedItemsContainer {
+        margin-top: 24px;
+      }
+      .tracked-items-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+      }
+      h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      #clearAllButton {
+        background: none;
+        border: none;
+        color: #ff6f00;
+        font-weight: 600;
+        padding: 4px;
+      }
+      #clearAllButton:hover {
+        text-decoration: underline;
+      }
+      #trackedItemsList {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .tracked-item {
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #eee;
+        transition: box-shadow 0.2s;
+      }
+      .tracked-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      }
+      .thumb {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 6px;
+        margin-right: 12px;
+        border: 1px solid #eee;
+      }
+      .item-info {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .item-info a {
+        color: #111;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .item-info a:hover {
+        color: #ff6f00;
+      }
+      .item-price {
+        font-size: 16px;
+        font-weight: 700;
+        color: #ff6f00;
+      }
+      .delete-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+      }
+      .delete-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: #999;
+        transition: fill 0.2s;
+      }
+      .delete-btn:hover svg {
+        fill: #ff6f00;
+      }
     </style>
   </head>
   <body>
-    <h3 style="margin-top:0">Price Tracker</h3>
-
-    <div class="row">
-      <button id="startPickerButton">Select price element</button>
-      <span id="statusText" class="muted" style="margin-left:8px;"></span>
+    <div class="header">
+      <h3>Price Tracker</h3>
+      <button id="startPickerButton">Select Price</button>
     </div>
 
-    <div id="trackedItemsContainer">
-      <h4 style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px;">
-        Tracked Items
-        <button id="clearAllButton" style="float: right;">Clear All</button>
-      </h4>
-      <div id="trackedItemsList"></div>
+    <div class="content">
+      <div class="row">
+        <span id="statusText"></span>
+      </div>
+
+      <div id="trackedItemsContainer">
+        <div class="tracked-items-header">
+          <h4>Tracked Items</h4>
+          <button id="clearAllButton">Clear All</button>
+        </div>
+        <div id="trackedItemsList"></div>
+      </div>
     </div>
 
     <script type="module" src="popup.js"></script>

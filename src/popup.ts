@@ -45,11 +45,15 @@ async function renderTrackedItems() {
           ${item.imageUrl ? `<img class="thumb" src="${item.imageUrl}" alt="" />` : ""}
           <div class="meta">
             <a href="${item.pageUrl}" target="_blank">${item.productName || "Untitled"}</a>
-            <div>${item.priceText}</div>
+            <div class="item-price">${item.priceText}</div>
           </div>
         </div>
       </div>
-      <button class="delete-btn" data-id="${item.id}">Delete</button>
+      <button class="delete-btn" data-id="${item.id}">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+        </svg>
+      </button>
     `;
     trackedItemsList.appendChild(itemElement);
   }
@@ -96,9 +100,11 @@ clearAllButton?.addEventListener("click", async () => {
 });
 
 trackedItemsList?.addEventListener("click", async (event) => {
-  const target = event.target as HTMLButtonElement;
-  if (target.classList.contains("delete-btn")) {
-    const id = target.dataset.id;
+  const target = event.target as HTMLElement;
+  const deleteButton = target.closest(".delete-btn");
+
+  if (deleteButton) {
+    const id = deleteButton.getAttribute("data-id");
     if (!id) return;
     const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
       trackedItems?: TrackedItem[];
