@@ -1,6 +1,6 @@
 # Generalized Price Tracker (TS Starter)
 
-A full-stack price tracking solution designed to monitor product prices across various websites. This project comprises a Chrome extension for frontend interaction and a Python script for backend web scraping and data management.
+A price tracking solution designed to monitor product prices across various websites. This project comprises a Chrome extension for frontend interaction and a Python script for backend web scraping and data management.
 
 ## Features
 
