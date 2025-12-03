@@ -9,12 +9,6 @@ A price tracking solution designed to monitor product prices across various webs
 *   **Content Script:** Interacts with web pages to potentially extract product information or trigger tracking actions.
 *   **Background Service Worker:** Handles background tasks and communication between different parts of the extension.
 
-### Python Scraper (Backend)
-*   **Web Scraping:** Utilizes Playwright to navigate to product URLs and extract price information.
-*   **Site-Specific Extractors:** Configurable to handle different website structures for accurate price retrieval.
-*   **Data Storage:** Stores historical price data, timestamps, product names, page titles, URLs, and screenshots in `data/prices.csv`.
-*   **Screenshot Capture:** Automatically captures full-page screenshots during price checks for visual records.
-*   **Price Alerts:** Sends optional Slack notifications when a product's current price meets or falls below a predefined target price.
 
 ## Technologies Used
 
