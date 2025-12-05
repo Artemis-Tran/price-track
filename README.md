@@ -18,13 +18,6 @@ A price tracking solution designed to monitor product prices across various webs
 *   **Chrome Extension Manifest V3:** The latest platform for building secure and performant Chrome extensions.
 *   **Chrome APIs:** `scripting`, `activeTab`, `tabs`, `storage` for extension functionality.
 
-### Backend (Python Scraper)
-*   **Python:** The primary language for the scraping logic.
-*   **Playwright:** A powerful library for browser automation and web scraping.
-*   **Pandas:** Used for convenient handling and display of CSV data.
-*   **python-dotenv:** For managing environment variables (e.g., Slack webhook).
-*   **`kernel` (Environment-Specific):** An assumed environment-specific component for browser interaction.
-
 ## Setup and Installation
 
 ### 1. Chrome Extension
