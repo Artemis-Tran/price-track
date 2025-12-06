@@ -22,10 +22,6 @@ A price tracking solution designed to monitor product prices across various webs
 
 ### 1. Chrome Extension
 
-#### Prerequisites
-*   Node.js (LTS recommended)
-*   npm (comes with Node.js)
-
 #### Installation
 1.  **Clone the repository:**
     ```bash
