@@ -50,27 +50,6 @@ npm run dev
 ```
 This will watch for changes in your source files and automatically rebuild the extension. You will still need to click the refresh button on the extension card in `chrome://extensions` to apply updates.
 
-### 2. Python Scraper
-
-#### Prerequisites
-*   Python 3.8+
-*   `pip` (Python package installer)
-
-#### Installation
-1.  **Navigate to the project root (if not already there):**
-    ```bash
-    cd price-track
-    ```
-2.  **Install Python dependencies:**
-    ```bash
-    pip install playwright pandas python-dotenv
-    # If you plan to use Slack notifications:
-    pip install requests
-    ```
-3.  **Install Playwright browser binaries:**
-    ```bash
-    playwright install
-    ```
 
 ## Configuration
 
