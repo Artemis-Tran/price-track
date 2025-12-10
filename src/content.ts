@@ -3,11 +3,22 @@ import type { RuntimeMessage, PricePickPayload } from "./types";
 let pickerActive = false;
 let hoverOverlay: HTMLDivElement | null = null;
 
+/**
+ * Truncates a string to a maximum length, appending an ellipsis if truncated.
+ * @param str The string to truncate.
+ * @param maxLength The maximum length of the string.
+ * @returns The truncated string.
+ */
 function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength) + "...";
 }
 
+/**
+ * Creates and injects the hover overlay element into the page.
+ * This overlay highlights the element the user is currently hovering over.
+ * @returns The created overlay element.
+ */
 function createHoverOverlay(): HTMLDivElement {
   const overlay = document.createElement("div");
   overlay.id = "__price_picker_overlay__";
@@ -29,6 +40,10 @@ function createHoverOverlay(): HTMLDivElement {
   return overlay;
 }
 
+/**
+ * Moves and resizes the hover overlay to match the dimensions and position of a given element.
+ * @param element The element to position the overlay over.
+ */
 function updateOverlayForElement(element: Element): void {
   const rect = element.getBoundingClientRect();
   if (!hoverOverlay) return;
@@ -40,6 +55,11 @@ function updateOverlayForElement(element: Element): void {
   });
 }
 
+/**
+ * Checks if an element ID is unique in the document.
+ * @param id The ID to check.
+ * @returns True if the ID is unique, false otherwise.
+ */
 function isIdUnique(id: string): boolean {
   try {
     const el = document.getElementById(id);
@@ -49,10 +69,21 @@ function isIdUnique(id: string): boolean {
   }
 }
 
+/**
+ * Escapes a string for use in a CSS selector.
+ * @param input The string to escape.
+ * @returns The escaped string.
+ */
 function cssEscapeSimple(input: string): string {
   return input.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
 }
 
+/**
+ * Generates a CSS selector for a given element.
+ * Tries to find a unique selector using ID, classes, and tag names.
+ * @param element The element to generate a selector for.
+ * @returns A CSS selector string.
+ */
 function getCssSelector(element: Element): string {
   const el = element as HTMLElement;
   if (el.id && isIdUnique(el.id)) {
@@ -101,10 +132,20 @@ function getCssSelector(element: Element): string {
   return parts.join(" > ");
 }
 
+/**
+ * Escapes a string for use in an XPath expression.
+ * @param input The string to escape.
+ * @returns The escaped string.
+ */
 function xpathEscapeSimple(input: string): string {
   return input.replace(/"/g, '\\"');
 }
 
+/**
+ * Generates an XPath for a given element.
+ * @param element The element to generate an XPath for.
+ * @returns An XPath string.
+ */
 function getXPath(element: Element): string {
   const el = element as HTMLElement;
   if (el.id && isIdUnique(el.id)) {
@@ -129,12 +170,23 @@ function getXPath(element: Element): string {
   return "/" + parts.join("/");
 }
 
+
+/**
+ * Checks if a string looks like a valid price.
+ * @param text The string to check.
+ * @returns True if the string is a valid price, false otherwise.
+ */
 function isValidPrice(text: string): boolean {
   const symbolMatch = /([$€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/.test(text);
   const codeMatch = /\d[\d,]*(?:\.\d{2})?\s*(USD|EUR|GBP|JPY|INR)/i.test(text);
   return symbolMatch || codeMatch;
 }
 
+/**
+ * Extracts the price text from an element.
+ * @param element The element to extract the price from.
+ * @returns The extracted price text.
+ */
 function extractPriceText(element: Element): string {
   const raw = ((element as HTMLElement).innerText || element.textContent || "").trim();
   const symbolMatch = raw.match(/([€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/);
@@ -148,6 +200,11 @@ function extractPriceText(element: Element): string {
   return raw.replace(/\s+/g, "");
 }
 
+/**
+ * Resolves a URL against the current page's URL.
+ * @param url The URL to resolve.
+ * @returns The resolved URL.
+ */
 function resolveUrlMaybe(url: string | undefined | null): string {
   if (!url) return "";
   try {
@@ -157,6 +214,10 @@ function resolveUrlMaybe(url: string | undefined | null): string {
   }
 }
 
+/**
+ * Parses JSON-LD scripts in the page to find product information.
+ * @returns The product name and image, or null if not found.
+ */
 function parseJsonLdProduct(): { name?: string; image?: string } | null {
   const scripts = Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]'));
   for (const script of scripts) {
@@ -178,11 +239,22 @@ function parseJsonLdProduct(): { name?: string; image?: string } | null {
   return null;
 }
 
+/**
+ * Gets the content of an Open Graph meta tag.
+ * @param property The Open Graph property to get.
+ * @returns The content of the meta tag.
+ */
 function getOgMetaContent(property: string): string {
   const el = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
   return (el && el.getAttribute("content")) || "";
 }
 
+/**
+ * Finds a candidate container element for a given element.
+ * This is used to find the parent element that contains the product information.
+ * @param element The element to find the container for.
+ * @returns The container element, or null if not found.
+ */
 function findCandidateContainer(element: Element): Element | null {
   const priorityClasses = ["product", "item", "card", "listing", "entry", "detail"];
   let current: Element | null = element;
@@ -199,6 +271,12 @@ function findCandidateContainer(element: Element): Element | null {
   return element.parentElement;
 }
 
+/**
+ * Tries to determine the product name from the page.
+ * Uses JSON-LD, Open Graph, and heading elements.
+ * @param element The element that was clicked.
+ * @returns The product name.
+ */
 function pickProductName(element: Element): string {
   const jsonLd = parseJsonLdProduct();
   if (jsonLd?.name) return String(jsonLd.name).trim();
@@ -219,6 +297,12 @@ function pickProductName(element: Element): string {
   return docTitle;
 }
 
+/**
+ * Calculates the distance between two DOM rectangles.
+ * @param a The first rectangle.
+ * @param b The second rectangle.
+ * @returns The distance between the centers of the two rectangles.
+ */
 function distance(a: DOMRect, b: DOMRect): number {
   const ax = a.left + a.width / 2;
   const ay = a.top + a.height / 2;
@@ -229,6 +313,12 @@ function distance(a: DOMRect, b: DOMRect): number {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+/**
+ * Tries to find the best product image on the page.
+ * Uses JSON-LD, Open Graph, and image elements near the clicked element.
+ * @param element The element that was clicked.
+ * @returns The URL of the product image.
+ */
 function pickProductImage(element: Element): string {
   const jsonLd = parseJsonLdProduct();
   if (jsonLd?.image) return resolveUrlMaybe(jsonLd.image as string);
@@ -260,11 +350,21 @@ function pickProductImage(element: Element): string {
   return "";
 }
 
+/**
+ * Gets a snippet of the outer HTML of an element.
+ * @param element The element to get the HTML from.
+ * @param maxLength The maximum length of the snippet.
+ * @returns The HTML snippet.
+ */
 function getOuterHtmlSnippet(element: Element, maxLength = 800): string {
   const html = (element as HTMLElement).outerHTML ?? "";
   return html.length > maxLength ? html.slice(0, maxLength) + "…(truncated)" : html;
 }
 
+/**
+ * Handles the mouse move event to update the hover overlay.
+ * @param event The mouse move event.
+ */
 function onMouseMove(event: MouseEvent): void {
   if (!pickerActive) return;
   const element = event.target as Element | null;
@@ -272,6 +372,10 @@ function onMouseMove(event: MouseEvent): void {
   updateOverlayForElement(element);
 }
 
+/**
+ * Handles the click event to select a price.
+ * @param event The click event.
+ */
 function onClick(event: MouseEvent): void {
   if (!pickerActive) return;
   event.preventDefault();
@@ -303,13 +407,17 @@ function onClick(event: MouseEvent): void {
     imageUrl: payload.imageUrl,
     cssSelector: payload.cssSelector,
     xPath: payload.xPath,
-    priceText: payload.priceText,
+priceText: payload.priceText,
     pageUrl: payload.pageUrl
   });
 
   chrome.runtime.sendMessage({ type: "PRICE_PICKED", payload } as RuntimeMessage);
 }
 
+/**
+ * Handles the key down event to cancel the price picker.
+ * @param event The key down event.
+ */
 function onKeyDown(event: KeyboardEvent): void {
   if (!pickerActive) return;
   if (event.key === "Escape") {
@@ -319,6 +427,10 @@ function onKeyDown(event: KeyboardEvent): void {
   }
 }
 
+/**
+ * Starts the price picker.
+ * This adds the hover overlay and event listeners.
+ */
 function startPicker(): void {
   if (pickerActive) return;
   pickerActive = true;
@@ -328,6 +440,10 @@ function startPicker(): void {
   document.addEventListener("keydown", onKeyDown, true);
 }
 
+/**
+ * Stops the price picker.
+ * This removes the hover overlay and event listeners.
+ */
 function cleanupPicker(): void {
   if (!pickerActive) return;
   pickerActive = false;

@@ -7,6 +7,11 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
+/**
+ * Generates a unique ID for a tracked item.
+ * Uses `crypto.randomUUID` if available, otherwise falls back to a timestamp-based ID.
+ * @returns A unique string identifier.
+ */
 function generateId(): string {
   if (crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
