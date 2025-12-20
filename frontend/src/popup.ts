@@ -26,9 +26,19 @@ async function ensureContentScript(tabId: number): Promise<void> {
 
 async function renderTrackedItems() {
   if (!trackedItemsList) return;
-  const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
-    trackedItems?: TrackedItem[];
-  };
+  
+  let trackedItems: TrackedItem[] = [];
+  try {
+    const res = await fetch("http://localhost:8080/items");
+    if (res.ok) {
+      trackedItems = await res.json();
+    }
+  } catch (err) {
+    console.error("Failed to fetch from backend, falling back to local storage", err);
+    const local = await chrome.storage.local.get(["trackedItems"]);
+    trackedItems = (local.trackedItems as TrackedItem[]) || [];
+  }
+  
   trackedItemsList.innerHTML = "";
 
   if (!trackedItems || trackedItems.length === 0) {

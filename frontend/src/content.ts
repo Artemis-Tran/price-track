@@ -15,7 +15,7 @@ function truncate(str: string, maxLength: number): string {
 }
 
 /**
- * Creates and injects the hover overlay element into the page.
+ * Creates and injects the hover overlay elemen t into the page.
  * This overlay highlights the element the user is currently hovering over.
  * @returns The created overlay element.
  */
@@ -66,7 +66,7 @@ function isIdUnique(id: string): boolean {
     return !!el;
   } catch {
     return false;
-  }
+  } 
 }
 
 /**

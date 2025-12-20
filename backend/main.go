@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -43,17 +43,21 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.Info("Handling request", "method", r.Method, "path", r.URL.Path)
+
 	switch r.Method {
 	case "GET":
 		store.RLock()
 		defer store.RUnlock()
 
+		slog.Info("Returning items", "count", len(store.Items))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(store.Items)
 
 	case "POST":
 		var item TrackedItem
 		if err := json.NewDecoder(r.Body).Decode(&item); err != nil {
+			slog.Error("Failed to decode item", "error", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -62,21 +66,28 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 		store.Items = append(store.Items, item)
 		store.Unlock()
 
+		slog.Info("Received item", "id", item.ID, "productName", item.ProductName)
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(item)
 
 	default:
+		slog.Warn("Method not allowed", "method", r.Method)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	http.HandleFunc("/items", itemsHandler)
 
 	port := ":8080"
-	fmt.Printf("Server starting on port %s...\n", port)
+	slog.Info("Server starting", "port", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Fatal(err)
+		slog.Error("Server failed", "error", err)
+		os.Exit(1)
 	}
 }

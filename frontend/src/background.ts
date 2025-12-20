@@ -1,12 +1,5 @@
 import type { RuntimeMessage, TrackedItem } from "./types";
 
-chrome.runtime.onInstalled.addListener(async () => {
-  const { trackedItems } = await chrome.storage.local.get(["trackedItems"]);
-  if (!Array.isArray(trackedItems)) {
-    await chrome.storage.local.set({ trackedItems: [] });
-  }
-});
-
 /**
  * Generates a unique ID for a tracked item.
  * Uses `crypto.randomUUID` if available, otherwise falls back to a timestamp-based ID.
@@ -33,6 +26,18 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, _sendRes
           savedAtIso: new Date().toISOString(),
           id: generateId()
         };
+
+        try {
+          await fetch("http://localhost:8080/items", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(item),
+          });
+        } catch (err) {
+          console.error("Failed to send item to backend:", err);
+        }
 
         await chrome.storage.local.set({ trackedItems: [...list, item], pendingUserNotes: "" });
         try {
