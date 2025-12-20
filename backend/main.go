@@ -78,11 +78,42 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func itemHandler(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	if r.Method == "OPTIONS" {
+		return
+	}
+
+	id := r.PathValue("id")
+	slog.Info("Handling item request", "method", r.Method, "id", id)
+
+	if r.Method == "DELETE" {
+		store.Lock()
+		defer store.Unlock()
+
+		for i, item := range store.Items {
+			if item.ID == id {
+				store.Items = append(store.Items[:i], store.Items[i+1:]...)
+				slog.Info("Deleted item", "id", id)
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+
+		slog.Warn("Item not found", "id", id)
+		http.Error(w, "Item not found", http.StatusNotFound)
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
 	http.HandleFunc("/items", itemsHandler)
+	http.HandleFunc("/items/{id}", itemHandler)
 
 	port := ":8080"
 	slog.Info("Server starting", "port", port)
