@@ -72,6 +72,14 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(item)
 
+	case "DELETE":
+		store.Lock()
+		store.Items = []TrackedItem{}
+		store.Unlock()
+
+		slog.Info("Cleared all items")
+		w.WriteHeader(http.StatusNoContent)
+
 	default:
 		slog.Warn("Method not allowed", "method", r.Method)
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

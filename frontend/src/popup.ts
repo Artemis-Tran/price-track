@@ -105,8 +105,12 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
 });
 
 clearAllButton?.addEventListener("click", async () => {
-  await chrome.storage.local.set({ trackedItems: [] });
-  await renderTrackedItems();
+    try {
+        await fetch("http://localhost:8080/items", { method: "DELETE" });
+    } catch (err) {
+        console.error("Failed to clear all items in backend", err);
+    }
+    await renderTrackedItems();
 });
 
 trackedItemsList?.addEventListener("click", async (event) => {
@@ -116,12 +120,15 @@ trackedItemsList?.addEventListener("click", async (event) => {
   if (deleteButton) {
     const id = deleteButton.getAttribute("data-id");
     if (!id) return;
-    const { trackedItems } = (await chrome.storage.local.get(["trackedItems"])) as {
-      trackedItems?: TrackedItem[];
-    };
-    if (!trackedItems) return;
-    const newList = trackedItems.filter((item) => item.id !== id);
-    await chrome.storage.local.set({ trackedItems: newList });
+    
+    try {
+        await fetch(`http://localhost:8080/items/${id}`, {
+            method: "DELETE"
+        });
+    } catch (err) {
+        console.error("Failed to delete item from backend", err);
+    }
+    
     await renderTrackedItems();
   }
 });
