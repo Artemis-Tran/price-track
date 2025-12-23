@@ -31,6 +31,10 @@ var store = Store{
 	Items: []TrackedItem{},
 }
 
+// Middleware
+
+type Middleware func(next http.Handler) http.Handler
+
 func enableCORS(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -122,7 +126,6 @@ func main() {
 
 	http.HandleFunc("/items", itemsHandler)
 	http.HandleFunc("/items/{id}", itemHandler)
-
 	port := ":8080"
 	slog.Info("Server starting", "port", port)
 	if err := http.ListenAndServe(port, nil); err != nil {

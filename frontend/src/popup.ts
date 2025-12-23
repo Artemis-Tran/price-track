@@ -30,13 +30,14 @@ async function renderTrackedItems() {
   let trackedItems: TrackedItem[] = [];
   try {
     const res = await fetch("http://localhost:8080/items");
-    if (res.ok) {
-      trackedItems = await res.json();
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
+    trackedItems = await res.json();
   } catch (err) {
-    console.error("Failed to fetch from backend, falling back to local storage", err);
-    const local = await chrome.storage.local.get(["trackedItems"]);
-    trackedItems = (local.trackedItems as TrackedItem[]) || [];
+    console.error("Failed to fetch from backend:", err);
+    if (statusText) statusText.textContent = "Error: Could not connect to backend.";
+    trackedItems = []; // Ensure it's empty on error
   }
   
   trackedItemsList.innerHTML = "";
@@ -93,8 +94,7 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
   }
 
   if (message.type === "TRACKED_ITEM_SAVED") {
-    const { item } = message;
-    if (userNotesInput) userNotesInput.value = item.userNotes;
+    if (userNotesInput) userNotesInput.value = ""; // Clear notes after saving
     if (statusText) statusText.textContent = "Saved to tracked items.";
 
     renderTrackedItems();
@@ -107,10 +107,11 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage) => {
 clearAllButton?.addEventListener("click", async () => {
     try {
         await fetch("http://localhost:8080/items", { method: "DELETE" });
+        await renderTrackedItems();
     } catch (err) {
         console.error("Failed to clear all items in backend", err);
+        if (statusText) statusText.textContent = "Error: Could not clear items from backend.";
     }
-    await renderTrackedItems();
 });
 
 trackedItemsList?.addEventListener("click", async (event) => {
@@ -125,11 +126,11 @@ trackedItemsList?.addEventListener("click", async (event) => {
         await fetch(`http://localhost:8080/items/${id}`, {
             method: "DELETE"
         });
+        await renderTrackedItems();
     } catch (err) {
         console.error("Failed to delete item from backend", err);
+        if (statusText) statusText.textContent = "Error: Could not delete item from backend.";
     }
-    
-    await renderTrackedItems();
   }
 });
 

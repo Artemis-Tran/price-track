@@ -14,15 +14,8 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, _sendRes
   if (message.type === "PRICE_PICKED") {
     (async () => {
       try {
-        const { trackedItems, pendingUserNotes } = (await chrome.storage.local.get([
-          "trackedItems",
-          "pendingUserNotes"
-        ])) as { trackedItems?: unknown; pendingUserNotes?: unknown };
-
-        const list = Array.isArray(trackedItems) ? trackedItems : [];
         const item: TrackedItem = {
           ...message.payload,
-          userNotes: typeof pendingUserNotes === "string" ? pendingUserNotes : "",
           savedAtIso: new Date().toISOString(),
           id: generateId()
         };
@@ -39,7 +32,6 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, _sendRes
           console.error("Failed to send item to backend:", err);
         }
 
-        await chrome.storage.local.set({ trackedItems: [...list, item], pendingUserNotes: "" });
         try {
           await chrome.runtime.sendMessage({ type: "TRACKED_ITEM_SAVED", item });
         } catch {

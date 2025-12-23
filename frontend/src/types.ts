@@ -10,7 +10,6 @@ export type PricePickPayload = {
 };
 
 export type TrackedItem = PricePickPayload & {
-  userNotes: string;
   savedAtIso: string;
   id: string;
 };
