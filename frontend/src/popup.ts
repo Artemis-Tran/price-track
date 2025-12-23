@@ -27,6 +27,13 @@ async function ensureContentScript(tabId: number): Promise<void> {
 async function renderTrackedItems() {
   if (!trackedItemsList) return;
   
+  // Show loading spinner
+  trackedItemsList.innerHTML = `
+    <div style="display: flex; justify-content: center; padding: 20px;">
+      <div class="loader"></div>
+    </div>
+  `;
+
   let trackedItems: TrackedItem[] = [];
   try {
     const res = await fetch("http://localhost:8080/items");
