@@ -31,24 +31,42 @@ var store = Store{
 	Items: []TrackedItem{},
 }
 
-// Middleware
+// Middleware definition
+type Middleware func(http.HandlerFunc) http.HandlerFunc
 
-type Middleware func(next http.Handler) http.Handler
+// Chain applies middlewares to a http.HandlerFunc
+func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
+	for _, m := range middlewares {
+		f = m(f)
+	}
+	return f
+}
 
-func enableCORS(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+// CORSMiddleware handles Cross-Origin Resource Sharing
+func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+// LoggingMiddleware logs the incoming request
+func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("Handling request", "method", r.Method, "path", r.URL.Path)
+		next(w, r)
+	}
 }
 
 func itemsHandler(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	slog.Info("Handling request", "method", r.Method, "path", r.URL.Path)
-
 	switch r.Method {
 	case "GET":
 		store.RLock()
@@ -91,13 +109,7 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func itemHandler(w http.ResponseWriter, r *http.Request) {
-	enableCORS(w)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
 	id := r.PathValue("id")
-	slog.Info("Handling item request", "method", r.Method, "id", id)
 
 	if r.Method == "DELETE" {
 		store.Lock()
@@ -106,7 +118,6 @@ func itemHandler(w http.ResponseWriter, r *http.Request) {
 		for i, item := range store.Items {
 			if item.ID == id {
 				store.Items = append(store.Items[:i], store.Items[i+1:]...)
-				slog.Info("Deleted item", "id", id)
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
@@ -124,8 +135,9 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	http.HandleFunc("/items", itemsHandler)
-	http.HandleFunc("/items/{id}", itemHandler)
+	http.HandleFunc("/items", Chain(itemsHandler, LoggingMiddleware, CORSMiddleware))
+	http.HandleFunc("/items/{id}", Chain(itemHandler, LoggingMiddleware, CORSMiddleware))
+
 	port := ":8080"
 	slog.Info("Server starting", "port", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
