@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -59,14 +64,77 @@ func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+type contextKey string
+
+const userIDKey contextKey = "userID"
+
+func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			return
+		}
+		tokenString := parts[1]
+
+		secret := os.Getenv("SUPABASE_JWT_SECRET")
+		if secret == "" {
+			slog.Error("SUPABASE_JWT_SECRET is not set")
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(secret), nil
+		})
+
+		if err != nil || !token.Valid {
+			slog.Warn("Invalid token", "error", err)
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return
+		}
+
+		sub, ok := claims["sub"].(string)
+		if !ok || sub == "" {
+			http.Error(w, "Token missing sub claim", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), userIDKey, sub)
+		next(w, r.WithContext(ctx))
+	}
+}
+
 func itemsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(userIDKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	switch r.Method {
 	case "GET":
 		rows, err := db.Query(`
 			SELECT id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at 
 			FROM tracked_items 
+			WHERE user_id = $1
 			ORDER BY created_at DESC
-		`)
+		`, userID)
 		if err != nil {
 			slog.Error("Failed to query items", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -89,7 +157,7 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 			items = append(items, i)
 		}
 
-		slog.Info("Returning items", "count", len(items))
+		slog.Info("Returning items", "count", len(items), "user_id", userID)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(items)
 
@@ -115,9 +183,9 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = db.Exec(`
-			INSERT INTO tracked_items (id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		`, item.ID, item.PriceText, item.ProductName, item.ImageURL, item.CSSSelector, item.XPath, item.PageURL, item.OuterHTMLSnippet, capturedAt, savedAt)
+			INSERT INTO tracked_items (id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at, user_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		`, item.ID, item.PriceText, item.ProductName, item.ImageURL, item.CSSSelector, item.XPath, item.PageURL, item.OuterHTMLSnippet, capturedAt, savedAt, userID)
 
 		if err != nil {
 			slog.Error("Failed to insert item", "error", err)
@@ -125,21 +193,21 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		slog.Info("Received and saved item", "id", item.ID, "productName", item.ProductName)
+		slog.Info("Received and saved item", "id", item.ID, "productName", item.ProductName, "user_id", userID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(item)
 
 	case "DELETE":
-		_, err := db.Exec("DELETE FROM tracked_items")
+		_, err := db.Exec("DELETE FROM tracked_items WHERE user_id = $1", userID)
 		if err != nil {
 			slog.Error("Failed to delete all items", "error", err)
 			http.Error(w, "Failed to delete items", http.StatusInternalServerError)
 			return
 		}
 
-		slog.Info("Cleared all items")
+		slog.Info("Cleared all items", "user_id", userID)
 		w.WriteHeader(http.StatusNoContent)
 
 	default:
@@ -149,10 +217,16 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func itemHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(userIDKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	id := r.PathValue("id")
 
 	if r.Method == "DELETE" {
-		result, err := db.Exec("DELETE FROM tracked_items WHERE id = $1", id)
+		result, err := db.Exec("DELETE FROM tracked_items WHERE id = $1 AND user_id = $2", id, userID)
 		if err != nil {
 			slog.Error("Failed to delete item", "id", id, "error", err)
 			http.Error(w, "Failed to delete item", http.StatusInternalServerError)
@@ -177,6 +251,11 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		slog.Warn("No .env file found, relying on system environment variables")
+	}
+
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		slog.Error("DATABASE_URL environment variable is not set")
@@ -196,8 +275,9 @@ func main() {
 	}
 	slog.Info("Connected to database")
 
-	http.HandleFunc("/items", Chain(itemsHandler, LoggingMiddleware, CORSMiddleware))
-	http.HandleFunc("/items/{id}", Chain(itemHandler, LoggingMiddleware, CORSMiddleware))
+	// Update chain to include AuthMiddleware
+	http.HandleFunc("/items", Chain(itemsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
+	http.HandleFunc("/items/{id}", Chain(itemHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 
 	port := ":8080"
 	slog.Info("Server starting", "port", port)
