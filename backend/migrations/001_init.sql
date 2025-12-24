@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS tracked_items (
   outer_html_snippet TEXT NOT NULL,
   captured_at TIMESTAMPTZ NOT NULL,
   saved_at TIMESTAMPTZ NOT NULL,
-  user_notes TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -31,7 +31,6 @@ var store = Store{
 	Items: []TrackedItem{},
 }
 
-// Middleware definition
 type Middleware func(http.HandlerFunc) http.HandlerFunc
 
 // Chain applies middlewares to a http.HandlerFunc
@@ -42,7 +41,6 @@ func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
 	return f
 }
 
-// CORSMiddleware handles Cross-Origin Resource Sharing
 func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
