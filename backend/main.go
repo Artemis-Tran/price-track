@@ -1,11 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
-	"sync"
+	"time"
+
+	_ "github.com/lib/pq"
 )
 
 type TrackedItem struct {
@@ -18,18 +21,10 @@ type TrackedItem struct {
 	PageURL          string `json:"pageUrl"`
 	OuterHTMLSnippet string `json:"outerHtmlSnippet"`
 	CapturedAtISO    string `json:"capturedAtIso"`
-	UserNotes        string `json:"userNotes"`
 	SavedAtISO       string `json:"savedAtIso"`
 }
 
-type Store struct {
-	sync.RWMutex
-	Items []TrackedItem
-}
-
-var store = Store{
-	Items: []TrackedItem{},
-}
+var db *sql.DB
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
 
@@ -67,12 +62,36 @@ func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func itemsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		store.RLock()
-		defer store.RUnlock()
+		rows, err := db.Query(`
+			SELECT id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at 
+			FROM tracked_items 
+			ORDER BY created_at DESC
+		`)
+		if err != nil {
+			slog.Error("Failed to query items", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
 
-		slog.Info("Returning items", "count", len(store.Items))
+		items := []TrackedItem{}
+		for rows.Next() {
+			var i TrackedItem
+			var capturedAt, savedAt time.Time
+			if err := rows.Scan(
+				&i.ID, &i.PriceText, &i.ProductName, &i.ImageURL, &i.CSSSelector, &i.XPath, &i.PageURL, &i.OuterHTMLSnippet, &capturedAt, &savedAt,
+			); err != nil {
+				slog.Error("Failed to scan item", "error", err)
+				continue
+			}
+			i.CapturedAtISO = capturedAt.Format(time.RFC3339)
+			i.SavedAtISO = savedAt.Format(time.RFC3339)
+			items = append(items, i)
+		}
+
+		slog.Info("Returning items", "count", len(items))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(store.Items)
+		json.NewEncoder(w).Encode(items)
 
 	case "POST":
 		var item TrackedItem
@@ -82,20 +101,43 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		store.Lock()
-		store.Items = append(store.Items, item)
-		store.Unlock()
+		capturedAt, err := time.Parse(time.RFC3339, item.CapturedAtISO)
+		if err != nil {
+			slog.Error("Failed to parse capturedAtIso", "error", err)
+			http.Error(w, "Invalid capturedAtIso", http.StatusBadRequest)
+			return
+		}
+		savedAt, err := time.Parse(time.RFC3339, item.SavedAtISO)
+		if err != nil {
+			slog.Error("Failed to parse savedAtIso", "error", err)
+			http.Error(w, "Invalid savedAtIso", http.StatusBadRequest)
+			return
+		}
 
-		slog.Info("Received item", "id", item.ID, "productName", item.ProductName)
+		_, err = db.Exec(`
+			INSERT INTO tracked_items (id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`, item.ID, item.PriceText, item.ProductName, item.ImageURL, item.CSSSelector, item.XPath, item.PageURL, item.OuterHTMLSnippet, capturedAt, savedAt)
+
+		if err != nil {
+			slog.Error("Failed to insert item", "error", err)
+			http.Error(w, "Failed to save item", http.StatusInternalServerError)
+			return
+		}
+
+		slog.Info("Received and saved item", "id", item.ID, "productName", item.ProductName)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(item)
 
 	case "DELETE":
-		store.Lock()
-		store.Items = []TrackedItem{}
-		store.Unlock()
+		_, err := db.Exec("DELETE FROM tracked_items")
+		if err != nil {
+			slog.Error("Failed to delete all items", "error", err)
+			http.Error(w, "Failed to delete items", http.StatusInternalServerError)
+			return
+		}
 
 		slog.Info("Cleared all items")
 		w.WriteHeader(http.StatusNoContent)
@@ -110,19 +152,21 @@ func itemHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	if r.Method == "DELETE" {
-		store.Lock()
-		defer store.Unlock()
-
-		for i, item := range store.Items {
-			if item.ID == id {
-				store.Items = append(store.Items[:i], store.Items[i+1:]...)
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
+		result, err := db.Exec("DELETE FROM tracked_items WHERE id = $1", id)
+		if err != nil {
+			slog.Error("Failed to delete item", "id", id, "error", err)
+			http.Error(w, "Failed to delete item", http.StatusInternalServerError)
+			return
 		}
 
-		slog.Warn("Item not found", "id", id)
-		http.Error(w, "Item not found", http.StatusNotFound)
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			slog.Warn("Item not found", "id", id)
+			http.Error(w, "Item not found", http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -132,6 +176,25 @@ func itemHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
+
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		slog.Error("DATABASE_URL environment variable is not set")
+		os.Exit(1)
+	}
+
+	var err error
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		slog.Error("Failed to open database connection", "error", err)
+		os.Exit(1)
+	}
+
+	if err := db.Ping(); err != nil {
+		slog.Error("Failed to ping database", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Connected to database")
 
 	http.HandleFunc("/items", Chain(itemsHandler, LoggingMiddleware, CORSMiddleware))
 	http.HandleFunc("/items/{id}", Chain(itemHandler, LoggingMiddleware, CORSMiddleware))

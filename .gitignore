@@ -2,3 +2,6 @@
 .venv
 dist
 node_modules
+# Go
+price-track-backend
+backend/price-track-backend
