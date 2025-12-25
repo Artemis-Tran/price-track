@@ -172,33 +172,100 @@
         animation: rotation 0.5s linear infinite reverse;
       }
       @keyframes rotation {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Simple Auth Styles to match base */
+      .hidden { display: none !important; }
+      .input-group { margin-bottom: 12px; }
+      input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      input:focus {
+        border-color: #FEDBD0;
+        outline: none;
+      }
+      .primary-btn {
+        background-color: #FEDBD0;
+        color: #442c2e;
+        border: none;
+        width: 100%;
+      }
+      .primary-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(254, 219, 208, 0.4);
+      }
+      .text-link {
+          color: #442c2e;
+          text-decoration: none;
+          font-weight: 600;
+      }
+      .text-link:hover {
+          text-decoration: underline;
       }
     </style>
   </head>
   <body>
-    <div class="header">
-      <h3>Price Tracker</h3>
-      <button id="startPickerButton">Select Price</button>
+    <!-- Auth Container -->
+    <div id="authContainer" class="content hidden" style="padding-top: 40px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h3>Login</h3>
+        <div style="color: #666; margin-top: 8px;">Sign in to sync your prices</div>
+      </div>
+      
+      <div class="input-group">
+        <input type="email" id="emailInput" placeholder="Email address" />
+      </div>
+      <div class="input-group">
+        <input type="password" id="passwordInput" placeholder="Password" />
+      </div>
+      
+      <button id="authButton" class="primary-btn">Sign In</button>
+      
+      <div style="text-align: center; margin-top: 16px; font-size: 13px;">
+        <a href="#" id="toggleAuthMode" class="text-link">Need an account? Sign Up</a>
+      </div>
+      
+      <div id="authMessage" style="text-align: center; margin-top: 16px; font-size: 13px; color: #d9534f; min-height: 20px;"></div>
     </div>
 
-    <div class="content">
-      <div class="row">
-        <span id="statusText"></span>
-      </div>
-
-      <div id="trackedItemsContainer">
-        <div class="tracked-items-header">
-          <h4>Tracked Items</h4>
-          <button id="clearAllButton">Clear All</button>
+    <!-- Main App Container (Restored Layout) -->
+    <div id="mainContainer" class="hidden">
+        <div class="header">
+        <h3>Price Tracker</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+             <button id="startPickerButton">Select Price</button>
+             <button id="logoutButton" style="padding: 10px; background: #eee; border: none; border-radius: 8px; color: #555;" title="Logout">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+             </button>
         </div>
-        <div id="trackedItemsList"></div>
-      </div>
+        </div>
+
+        <div class="content">
+        <div class="row">
+            <div class="input-group" style="width: 100%;">
+                <input type="text" id="userNotesInput" placeholder="Add notes..." />
+            </div>
+        </div>
+        
+        <div class="row">
+            <span id="statusText"></span>
+        </div>
+
+        <div id="trackedItemsContainer">
+            <div class="tracked-items-header">
+            <h4>Tracked Items</h4>
+            <button id="clearAllButton">Clear All</button>
+            </div>
+            <div id="trackedItemsList"></div>
+        </div>
+        </div>
     </div>
 
     <script type="module" src="popup.js"></script>

@@ -1,6 +1,9 @@
 import esbuild from "esbuild";
 import { rmSync, mkdirSync, copyFileSync, readdirSync, statSync, watch as fsWatch } from "node:fs";
 import { join } from "node:path";
+import { config } from "dotenv";
+
+config();
 
 const isWatch = process.argv.includes("--watch");
 
@@ -49,7 +52,11 @@ const buildOptions = {
   outdir: "dist",
   target: ["chrome120"],
   minify: false,
-  logLevel: "info"
+  logLevel: "info",
+  define: {
+    "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL),
+    "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY),
+  }
 };
 
 if (isWatch) {

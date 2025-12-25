@@ -7,9 +7,12 @@
     "build": "node esbuild.config.mjs",
     "clean": "rm -rf dist",
     "dev": "NODE_ENV=development node esbuild.config.mjs --watch"
-    },
+  },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.89.0",
     "@types/chrome": "^0.0.269",
+    "@types/node": "^25.0.3",
+    "dotenv": "^17.2.3",
     "esbuild": "^0.24.0",
     "typescript": "^5.6.3"
   }

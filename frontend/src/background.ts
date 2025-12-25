@@ -1,4 +1,5 @@
 import type { RuntimeMessage, TrackedItem } from "./types";
+import { getToken } from "./auth";
 
 /**
  * Generates a unique ID for a tracked item.
@@ -21,13 +22,25 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, _sendRes
         };
 
         try {
-          await fetch("http://localhost:8080/items", {
+          const token = await getToken();
+          const headers: HeadersInit = {
+            "Content-Type": "application/json",
+          };
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          } else {
+             console.warn("No auth token found, request might fail");
+          }
+
+          const res = await fetch("http://localhost:8080/items", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers,
             body: JSON.stringify(item),
           });
+          
+          if (!res.ok) {
+              console.error("Backend error:", res.status, res.statusText);
+          }
         } catch (err) {
           console.error("Failed to send item to backend:", err);
         }
