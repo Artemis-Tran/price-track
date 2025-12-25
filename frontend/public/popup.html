@@ -44,6 +44,18 @@
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(254, 219, 208, 0.4);
       }
+      #logoutButton {
+        padding: 10px;
+        background: #eee;
+        border: none;
+        border-radius: 8px;
+        color: #555;
+      }
+      #logoutButton:hover {
+        background: #e0e0e0;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
       .content {
         padding: 16px;
       }
@@ -237,13 +249,13 @@
       <div id="authMessage" style="text-align: center; margin-top: 16px; font-size: 13px; color: #d9534f; min-height: 20px;"></div>
     </div>
 
-    <!-- Main App Container (Restored Layout) -->
+    <!-- Main App Container -->
     <div id="mainContainer" class="hidden">
         <div class="header">
         <h3>Price Tracker</h3>
         <div style="display: flex; gap: 8px; align-items: center;">
              <button id="startPickerButton">Select Price</button>
-             <button id="logoutButton" style="padding: 10px; background: #eee; border: none; border-radius: 8px; color: #555;" title="Logout">
+             <button id="logoutButton" title="Logout">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
              </button>
         </div>
