@@ -6,6 +6,7 @@ import { signIn, signUp, signOut, getSession } from "./auth";
 const authContainer = document.getElementById("authContainer") as HTMLDivElement;
 const mainContainer = document.getElementById("mainContainer") as HTMLDivElement;
 
+const authForm = document.getElementById("authForm") as HTMLFormElement | null;
 const authButton = document.getElementById("authButton") as HTMLButtonElement | null;
 const logoutButton = document.getElementById("logoutButton") as HTMLButtonElement | null;
 const emailInput = document.getElementById("emailInput") as HTMLInputElement | null;
@@ -58,7 +59,8 @@ toggleAuthModeLink?.addEventListener("click", (e) => {
     if (authMessage) authMessage.textContent = "";
 });
 
-authButton?.addEventListener("click", async () => {
+authForm?.addEventListener("submit", async (e) => {
+  e.preventDefault();
   if (!emailInput || !emailInput.value || !passwordInput || !passwordInput.value) {
     if (authMessage) authMessage.textContent = "Please enter both email and password.";
     return;

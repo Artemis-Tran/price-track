@@ -219,14 +219,16 @@
         <div style="color: #666; margin-top: 8px;">Sign in to sync your prices</div>
       </div>
       
-      <div class="input-group">
-        <input type="email" id="emailInput" placeholder="Email address" />
-      </div>
-      <div class="input-group">
-        <input type="password" id="passwordInput" placeholder="Password" />
-      </div>
-      
-      <button id="authButton" class="primary-btn">Sign In</button>
+      <form id="authForm">
+        <div class="input-group">
+          <input type="email" id="emailInput" placeholder="Email address" />
+        </div>
+        <div class="input-group">
+          <input type="password" id="passwordInput" placeholder="Password" />
+        </div>
+        
+        <button type="submit" id="authButton" class="primary-btn">Sign In</button>
+      </form>
       
       <div style="text-align: center; margin-top: 16px; font-size: 13px;">
         <a href="#" id="toggleAuthMode" class="text-link">Need an account? Sign Up</a>
