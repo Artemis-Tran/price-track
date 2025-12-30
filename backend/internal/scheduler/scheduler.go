@@ -23,11 +23,7 @@ func New(db *sql.DB) *Scheduler {
 }
 
 func (s *Scheduler) Start() {
-	// Ticker for checking prices.
-	// For production, this might be 1 hour. For testing/demo, we'll set it to 10 minutes.
-	// Or even shorter if we want to see it iterate.
-	// Let's go with 1 hour as a reasonable default, but check immediately on start?
-	// The prompt implies it runs periodically.
+
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
@@ -87,18 +83,6 @@ func (s *Scheduler) processItem(id, userID, oldPriceText, productName, pageURL, 
 		slog.Warn("Failed to parse new price", "price", newPriceText, "error", err)
 		return
 	}
-
-	// Update the last captured price in DB?
-	// The prompt says "if the price has decreased ... send a notification".
-	// It doesn't explicitly say "update the price in the DB", but usually we should to avoid repeated notifications.
-	// However, the prompt says "check the price again ... if the price has decreased from what the price ORIGINALLY was".
-	// Depending on interpretation:
-	// 1. Compare against the "saved" price (originally was).
-	// 2. Compare against "last checked" price.
-	// Prompt: "if the price has decreased from what the price originally was" implies we compare against `price_text` in DB.
-	// So we don't necessarily update `price_text` immediately unless we want to reset the baseline?
-	// Usually, if price drops, we notify.
-	// Let's assume we notify if New < Old.
 
 	if newPrice < oldPrice {
 		slog.Info("Price drop detected!", "product", productName, "old", oldPrice, "new", newPrice)
@@ -176,18 +160,8 @@ func (s *Scheduler) sendNotification(userID, productName, oldPrice, newPrice, pr
 }
 
 func parsePrice(priceStr string) (float64, error) {
-	// Remove anything that is not a digit or a dot
 	re := regexp.MustCompile(`[^\d\.]`)
 	cleaned := re.ReplaceAllString(priceStr, "")
-
-	// Handle cases like "1,234.56" -> remove commas first?
-	// The regex `[^\d\.]` removes commas.
-	// So "1,234.56" becomes "1234.56" - correct.
-	// "$10.99" -> "10.99" - correct.
-	// "EUR 50" -> "50" - correct.
-
-	// Edge case: multiple dots? "1.2.3".
-	// For now, assume standard price format.
 
 	return strconv.ParseFloat(cleaned, 64)
 }
