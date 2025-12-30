@@ -1,6 +1,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getCssSelector } from './content';
+import { getCssSelector } from './utils';
 
 describe('getCssSelector Robustness', () => {
     beforeEach(() => {
@@ -68,5 +68,24 @@ describe('getCssSelector Robustness', () => {
         
         expect(selector).toContain('itemprop="price"');
         expect(document.querySelector(selector)).toBe(el);
+    });
+});
+
+import { extractPriceText } from './utils';
+
+describe('Price Extraction', () => {
+    it('should correctly extract price from cluttered text', () => {
+        const element = document.createElement('div');
+        // Simulate the text that likely caused the issue (no spaces between price and text)
+        element.textContent = '$159.99with10percentsavings-10%$159.99';
+        
+        const price = extractPriceText(element);
+        expect(price).toBe('$159.99');
+    });
+
+    it('should correctly extract price with standard formatting', () => {
+         const element = document.createElement('div');
+         element.textContent = 'Price: $19.99';
+         expect(extractPriceText(element)).toBe('$19.99');
     });
 });
