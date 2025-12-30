@@ -60,7 +60,7 @@ function updateOverlayForElement(element: Element): void {
  * @param id The ID to check.
  * @returns True if the ID is unique, false otherwise.
  */
-function isIdUnique(id: string): boolean {
+export function isIdUnique(id: string): boolean {
   try {
     const el = document.getElementById(id);
     return !!el;
@@ -74,61 +74,128 @@ function isIdUnique(id: string): boolean {
  * @param input The string to escape.
  * @returns The escaped string.
  */
-function cssEscapeSimple(input: string): string {
+export function cssEscapeSimple(input: string): string {
   return input.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
 }
 
+
 /**
  * Generates a CSS selector for a given element.
- * Tries to find a unique selector using ID, classes, and tag names.
+ * Tries to find a unique selector using ID, classes, attributes, and tag names.
+ * Prioritizes stable attributes and avoids fragile :nth-of-type selectors where possible.
  * @param element The element to generate a selector for.
  * @returns A CSS selector string.
  */
-function getCssSelector(element: Element): string {
-  const el = element as HTMLElement;
-  if (el.id && isIdUnique(el.id)) {
-    return `#${cssEscapeSimple(el.id)}`;
+export function getCssSelector(element: Element): string {
+  if (element.id && isIdUnique(element.id)) {
+    return `#${cssEscapeSimple(element.id)}`;
   }
+
   const parts: string[] = [];
-  let bestUnique: string[] | null = null;
-  let current: Element | null = el;
+  let current: Element | null = element;
   let depth = 0;
 
-  while (current && depth < 8) {
+  // Attributes to prioritize for stability
+  const stableAttributes = [
+    "itemprop", // Common on e-commerce sites
+    "data-testid",
+    "data-hook", // Common on Amazon
+    "data-a-input-name",
+    "name",
+    "role",
+    "aria-label",
+    "title",
+    "alt",
+    "placeholder",
+    "data-id",
+    "data-automation-id"
+  ];
+
+  while (current && depth < 10) {
+    // 1. If we hit a unique ID (that isn't the start element), anchor to it and stop
+    if (current.id && isIdUnique(current.id)) {
+      parts.unshift(`#${cssEscapeSimple(current.id)}`);
+      return parts.join(" > ");
+    }
+
+    // 2. Build a local selector for this element
     const tag = current.tagName.toLowerCase();
-    const classList = Array.from((current as HTMLElement).classList || []).filter(
-      (c) => c && c.length <= 32 && !/\d{4,}/.test(c)
-    );
     let selector = tag;
+    
+    // Add specific attributes if present
+    for (const attr of stableAttributes) {
+      if (current.hasAttribute(attr)) {
+        const val = current.getAttribute(attr);
+        if (val) {
+          selector += `[${attr}="${cssEscapeSimple(val)}"]`;
+        }
+      }
+    }
+
+    // Add classes (filter out purely numeric or extremely long dynamic-looking classes)
+    const classList = Array.from(current.classList || []).filter(
+      (c) => c && c.length <= 40 && !/^[0-9]+$/.test(c) && !/^[a-z0-9]{20,}$/.test(c)
+    );
     if (classList.length) {
       selector += "." + classList.map(cssEscapeSimple).join(".");
     }
+
+    // 3. Check uniqueness among siblings to decide if we need :nth-of-type
+    // We only need nth-of-type if there are other siblings that match the CURRENT selector
     const parent: Element | null = current.parentElement;
+    let needsNthType = false;
+    
     if (parent) {
-      const sameTagSiblings = Array.from(parent.children).filter(
-        (child) => (child as Element).tagName === current!.tagName
+      // Find all children that match our current proposed selector (tag + attrs + classes)
+      const matchingSiblings = Array.from(parent.children).filter(
+        child => {
+          if (child === current) return true;
+          if (child.tagName.toLowerCase() !== tag) return false;
+          
+          // Check attributes
+          for (const attr of stableAttributes) {
+            if (current!.hasAttribute(attr)) {
+                if (child.getAttribute(attr) !== current!.getAttribute(attr)) return false;
+            }
+          }
+           // Check classes - exact match? or subset? 
+           // Let's require that the sibling has ALL the classes we put in the selector
+           return classList.every(c => child.classList.contains(c));
+        }
       );
-      if (sameTagSiblings.length > 1) {
-        const index = sameTagSiblings.indexOf(current as HTMLElement) + 1;
-        selector += `:nth-of-type(${index})`;
+
+      if (matchingSiblings.length > 1) {
+         needsNthType = true;
       }
     }
 
-    parts.unshift(selector);
-    const partial = parts.join(" > ");
-    try {
-      if (document.querySelectorAll(partial).length === 1) {
-        bestUnique = parts.slice();
-      }
-    } catch {
-      // ignore invalid intermediate selectors
+    if (needsNthType) {
+        // Fallback to nth-of-type
+       const sameTagSiblings = parent ? Array.from(parent.children).filter(c => c.tagName === current!.tagName) : [];
+       const index = sameTagSiblings.indexOf(current) + 1;
+       selector += `:nth-of-type(${index})`;
     }
+
+    parts.unshift(selector);
+    
+    // 4. Check if the partial selector is already unique relative to the whole document
+    // But be careful, checking document.querySelectorAll at every step is expensive.
+    // However, if we found a unique path, it's worth it.
+    const fullSelector = parts.join(" > ");
+    
+    try {
+        if (document.querySelectorAll(fullSelector).length === 1) {
+            return fullSelector;
+        }
+    } catch {
+        // ignore invalid selectors
+    }
+
     current = parent;
     depth++;
   }
-  if (bestUnique) {
-    return bestUnique.join(" > ");
-  }
+
+  // If we ran out of parents or depth, just return what we have (even if not fully unique, though unlikely)
   return parts.join(" > ");
 }
 
@@ -454,13 +521,15 @@ function cleanupPicker(): void {
   hoverOverlay = null;
 }
 
-chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
-  if (message.type === "PING_PRICE_PICKER") {
-    sendResponse?.({ ok: true });
-  }
-  if (message.type === "START_PRICE_PICK") {
-    startPicker();
-  }
-  // Return true if you plan to call sendResponse asynchronously
-  return false;
-});
+if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
+    if (message.type === "PING_PRICE_PICKER") {
+      sendResponse?.({ ok: true });
+    }
+    if (message.type === "START_PRICE_PICK") {
+      startPicker();
+    }
+    // Return true if you plan to call sendResponse asynchronously
+    return false;
+  });
+}
