@@ -1,9 +1,21 @@
 module price-track-backend
 
-go 1.22.2
+go 1.24.0
+
+toolchain go1.24.11
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/PuerkitoBio/goquery v1.11.0
+	github.com/antchfx/htmlquery v1.3.5
+	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
+)
+
+require (
+	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/antchfx/xpath v1.3.5 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 )

@@ -14,6 +14,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+
+	"price-track-backend/internal/scheduler"
 )
 
 type TrackedItem struct {
@@ -275,11 +277,15 @@ func main() {
 	}
 	slog.Info("Connected to database")
 
+	// Start Scheduler
+	sch := scheduler.New(db)
+	go sch.Start()
+
 	// Update chain to include AuthMiddleware
 	http.HandleFunc("/items", Chain(itemsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 	http.HandleFunc("/items/{id}", Chain(itemHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 
-	port := ":8080"
+	port := ":8081"
 	slog.Info("Server starting", "port", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
 		slog.Error("Server failed", "error", err)
