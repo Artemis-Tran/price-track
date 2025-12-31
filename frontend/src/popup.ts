@@ -173,6 +173,22 @@ async function renderTrackedItems() {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
     trackedItems = await res.json();
+    
+    if (startPickerButton) {
+      if (trackedItems.length >= 5) {
+        startPickerButton.disabled = true;
+        startPickerButton.textContent = "Limit Reached (5/5)";
+        startPickerButton.title = "You can only track up to 5 items.";
+        startPickerButton.style.opacity = "0.6";
+        startPickerButton.style.cursor = "not-allowed";
+      } else {
+        startPickerButton.disabled = false;
+        startPickerButton.textContent = "Select Price";
+        startPickerButton.title = "";
+        startPickerButton.style.opacity = "";
+        startPickerButton.style.cursor = "";
+      }
+    }
   } catch (err) {
     console.error("Failed to fetch from backend:", err);
     if (statusText) statusText.textContent = "Error: Could not connect to backend.";
