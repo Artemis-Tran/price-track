@@ -1,4 +1,4 @@
-const PRICE_REGEX = /([$€£¥₹]|US?\$)\s*\d[\d,]*(?:\.\d{2})?/;
+const PRICE_REGEX = /([$€£¥₹]|US?\$)\s*\d[\d,]*\s*(?:\.\s*\d{2})?/;
 const CURRENCY_CODE_REGEX = /\d[\d,]*(?:\.\d{2})?\s*(USD|EUR|GBP|JPY|INR)/i;
 
 /**
@@ -158,3 +158,41 @@ export function getCssSelector(element: Element): string {
   return parts.join(" > ");
 }
 
+
+/**
+ * Tries to find a better price element by looking at parents.
+ * Useful when the user clicks on a fraction or symbol.
+ * @param element The element that was clicked.
+ * @returns The best candidate element for the price.
+ */
+export function findBestPriceElement(element: Element): Element {
+  let current: Element | null = element;
+  let best = element;
+  let depth = 0;
+
+  // Heuristic: Parents with specific classes or that contain the full price text
+  // are likely better candidates.
+  while (current && depth < 3) {
+    if (current.classList.contains("a-price")) {
+        return current;
+    }
+    
+    // Check if parent has more valid price text
+    const currentPrice = extractPriceText(best);
+    const parentPrice = extractPriceText(current);
+    
+    if (!isValidPrice(currentPrice) && isValidPrice(parentPrice)) {
+        best = current;
+    } else if (isValidPrice(currentPrice) && isValidPrice(parentPrice)) {
+       // If both are valid, prefer the one that is longer (more likely to be complete)
+       // provided it doesn't become too long (like a whole card)
+       if (parentPrice.length > currentPrice.length && parentPrice.length < 20) {
+           best = current;
+       }
+    }
+
+    current = current.parentElement;
+    depth++;
+  }
+  return best;
+}

@@ -99,7 +99,7 @@ function getXPath(element: Element): string {
  * @param text The string to check.
  * @returns True if the string is a valid price, false otherwise.
  */
-import { isValidPrice, extractPriceText, getCssSelector, cssEscapeSimple, isIdUnique } from "./utils";
+import { isValidPrice, extractPriceText, getCssSelector, cssEscapeSimple, isIdUnique, findBestPriceElement } from "./utils";
 
 /**
  * Resolves a URL against the current page's URL.
@@ -268,8 +268,9 @@ function getOuterHtmlSnippet(element: Element, maxLength = 800): string {
  */
 function onMouseMove(event: MouseEvent): void {
   if (!pickerActive) return;
-  const element = event.target as Element | null;
-  if (!element) return;
+  const target = event.target as Element | null;
+  if (!target) return;
+  const element = findBestPriceElement(target);
   updateOverlayForElement(element);
 }
 
@@ -283,7 +284,8 @@ function onClick(event: MouseEvent): void {
   event.stopPropagation();
   event.stopImmediatePropagation?.();
 
-  const element = event.target as Element;
+  const clickedElement = event.target as Element;
+  const element = findBestPriceElement(clickedElement);
   const priceText = extractPriceText(element);
   if (!isValidPrice(priceText)) {
     alert("Please select a valid price element.");
