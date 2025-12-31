@@ -6,7 +6,9 @@
   "scripts": {
     "build": "node esbuild.config.mjs",
     "clean": "rm -rf dist",
-    "dev": "NODE_ENV=development node esbuild.config.mjs --watch"
+    "dev": "NODE_ENV=development node esbuild.config.mjs --watch",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.89.0",
