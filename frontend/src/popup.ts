@@ -151,13 +151,18 @@ async function authenticatedFetch(url: string, options: RequestInit = {}) {
 async function renderTrackedItems() {
   if (!trackedItemsList) return;
   
-  trackedItemsList.innerHTML = `
-    <div style="display: flex; justify-content: center; padding: 20px;">
-      <div class="loader"></div>
-    </div>
-  `;
+  // Only show loader if empty, otherwise we're refreshing
+  if (trackedItemsList.children.length === 0) {
+      trackedItemsList.innerHTML = `
+        <div style="display: flex; justify-content: center; padding: 20px;">
+          <div class="loader"></div>
+        </div>
+      `;
+  }
 
   let trackedItems: TrackedItem[] = [];
+  const currentScrollTop = trackedItemsList.scrollTop; // Save scroll position
+
   try {
     const res = await authenticatedFetch("http://localhost:8080/items");
     if (!res.ok) {
@@ -208,16 +213,17 @@ async function renderTrackedItems() {
     itemElement.className = "tracked-item";
     
     // Safety check for image URL
+    // Use loading="lazy" for performance
     const imgHtml = item.imageUrl 
-      ? `<img class="thumb" src="${item.imageUrl}" alt="Product Image" />` 
+      ? `<img class="thumb" src="${item.imageUrl}" alt="Product Image" loading="lazy" />` 
       : `<div class="thumb" style="display: flex; align-items: center; justify-content: center; color: #cbd5e1;">📷</div>`;
 
     itemElement.innerHTML = `
-      <div class="item-content">
+      <div class="item-info">
         ${imgHtml}
-        <div class="details">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
           <a href="${item.pageUrl}" target="_blank" title="${item.productName || "Untitled"}">${item.productName || "Untitled"}</a>
-          <span class="price">${item.priceText}</span>
+          <span class="item-price">${item.priceText}</span>
         </div>
       </div>
       <button class="delete-btn" data-id="${item.id}" title="Stop tracking">
@@ -227,6 +233,11 @@ async function renderTrackedItems() {
       </button>
     `;
     trackedItemsList.appendChild(itemElement);
+  }
+  
+  // Restore scroll position
+  if (currentScrollTop > 0) {
+      trackedItemsList.scrollTop = currentScrollTop;
   }
 }
 
@@ -280,15 +291,65 @@ trackedItemsList?.addEventListener("click", async (event) => {
     const id = deleteButton.getAttribute("data-id");
     if (!id) return;
     
+    // Optimistic Delete: Remove from UI immediately
+    const itemElement = deleteButton.closest(".tracked-item");
+    itemElement?.remove();
+    
+    // If list is now empty, show empty state
+    if (trackedItemsList && trackedItemsList.children.length === 0) {
+        trackedItemsList.innerHTML = '<div class="muted" style="text-align:center; padding: 24px;">No items tracked yet.</div>';
+    }
+
     try {
         await authenticatedFetch(`http://localhost:8080/items/${id}`, {
             method: "DELETE"
         });
-        await renderTrackedItems();
+        // Do NOT re-render here to avoid flash/jump. The item is already gone.
+        // We only re-fetch if we suspect state drift, but for simple delete, it's fine.
     } catch (err) {
         console.error("Failed to delete item", err);
+        // Rollback would go here (alert user and maybe re-fetch list)
+        alert("Failed to delete item. Please refresh.");
+        renderTrackedItems();
     }
   }
 });
 
-document.addEventListener("DOMContentLoaded", updateUIState);
+function setupSmoothScroll(container: HTMLElement) {
+    let target = container.scrollTop;
+    let pos = container.scrollTop;
+    let rafId: number | null = null;
+    
+    container.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      if (rafId === null) {
+          target = container.scrollTop;
+          pos = container.scrollTop;
+      }
+      
+      target += e.deltaY;
+      target = Math.max(0, Math.min(container.scrollHeight - container.clientHeight, target));
+      
+      if (rafId === null) {
+        rafId = requestAnimationFrame(animate);
+      }
+    }, { passive: false });
+  
+    function animate() {
+      const diff = target - pos;
+      if (Math.abs(diff) < 1) {
+        container.scrollTop = target;
+        pos = target;
+        rafId = null;
+        return;
+      }
+      
+      pos += diff * 0.075;
+      container.scrollTop = pos;
+      rafId = requestAnimationFrame(animate);
+    }
+  }
+  
+  if (trackedItemsList) setupSmoothScroll(trackedItemsList);
+  
+  document.addEventListener("DOMContentLoaded", updateUIState);
