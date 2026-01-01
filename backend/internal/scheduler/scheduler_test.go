@@ -14,10 +14,10 @@ func TestScrapePrice_CSS(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	s := &Scheduler{}
-	price, err := s.scrapePrice(ts.URL, ".price", "")
+	scraper := NewScraper()
+	price, err := scraper.ScrapePrice(ts.URL, ".price", "")
 	if err != nil {
-		t.Fatalf("scrapePrice failed: %v", err)
+		t.Fatalf("ScrapePrice failed: %v", err)
 	}
 
 	if price != "$19.99" {
@@ -33,10 +33,10 @@ func TestScrapePrice_XPath(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	s := &Scheduler{}
-	price, err := s.scrapePrice(ts.URL, "", "//div[@id='p']")
+	scraper := NewScraper()
+	price, err := scraper.ScrapePrice(ts.URL, "", "//div[@id='p']")
 	if err != nil {
-		t.Fatalf("scrapePrice failed: %v", err)
+		t.Fatalf("ScrapePrice failed: %v", err)
 	}
 
 	if price != "$20.00" {
