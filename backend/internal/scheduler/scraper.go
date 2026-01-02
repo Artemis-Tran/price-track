@@ -82,16 +82,12 @@ func (s *Scraper) Stop() {
 	slog.Info("Playwright browser stopped")
 }
 
-// ScrapePrice attempts to scrape a price from a URL using the given selectors.
-// It tries HTTP first (fast), then falls back to Playwright if element not found.
 func (s *Scraper) ScrapePrice(url, cssSelector, xpathSelector string) (string, error) {
-	// Try HTTP first (fast path)
 	price, err := s.scrapePriceHTTP(url, cssSelector, xpathSelector)
 	if err == nil {
 		return price, nil
 	}
 
-	// If HTTP failed with "element not found", try Playwright
 	if strings.Contains(err.Error(), "element not found") {
 		slog.Info("HTTP scrape failed, trying Playwright", "url", url, "error", err)
 		return s.scrapePricePlaywright(url, cssSelector)
@@ -100,7 +96,6 @@ func (s *Scraper) ScrapePrice(url, cssSelector, xpathSelector string) (string, e
 	return "", err
 }
 
-// scrapePriceHTTP uses standard HTTP GET + goquery/htmlquery (no JS execution)
 func (s *Scraper) scrapePriceHTTP(url, cssSelector, xpathSelector string) (string, error) {
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -147,7 +142,6 @@ func (s *Scraper) scrapePriceHTTP(url, cssSelector, xpathSelector string) (strin
 	return "", fmt.Errorf("no selector provided")
 }
 
-// scrapePricePlaywright uses a headless browser with stealth features to render JavaScript and extract price
 func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error) {
 	s.mu.Lock()
 	if !s.started {
@@ -164,7 +158,6 @@ func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error)
 		return "", fmt.Errorf("CSS selector required for Playwright scraping")
 	}
 
-	// Stealth: Create a context with realistic browser settings
 	context, err := browser.NewContext(playwright.BrowserNewContextOptions{
 		UserAgent: playwright.String("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
 		Viewport: &playwright.Size{
@@ -175,7 +168,7 @@ func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error)
 		TimezoneId:        playwright.String("America/Los_Angeles"),
 		HasTouch:          playwright.Bool(false),
 		JavaScriptEnabled: playwright.Bool(true),
-		// Stealth: Spoof permissions and device features
+
 		Permissions: []string{"geolocation"},
 		ExtraHttpHeaders: map[string]string{
 			"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -202,7 +195,6 @@ func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error)
 	}
 	defer page.Close()
 
-	// Stealth: Override navigator.webdriver to hide automation
 	err = page.AddInitScript(playwright.Script{
 		Content: playwright.String(`
 			// Override webdriver detection
@@ -245,25 +237,21 @@ func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error)
 		slog.Warn("Could not add stealth script", "error", err)
 	}
 
-	// Navigate to the page with domcontentloaded (faster than networkidle)
 	_, err = page.Goto(url, playwright.PageGotoOptions{
 		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-		Timeout:   playwright.Float(30000), // 30 second timeout
+		Timeout:   playwright.Float(30000),
 	})
 	if err != nil {
 		return "", fmt.Errorf("could not navigate to page: %w", err)
 	}
 
-	// Wait a bit for JS to render (random delay to appear human)
 	time.Sleep(time.Duration(1000+rand.Intn(2000)) * time.Millisecond)
 
-	// Wait for the selector to appear
 	err = page.Locator(cssSelector).First().WaitFor(playwright.LocatorWaitForOptions{
 		State:   playwright.WaitForSelectorStateVisible,
-		Timeout: playwright.Float(15000), // 15 second timeout
+		Timeout: playwright.Float(15000),
 	})
 	if err != nil {
-		// Debug: save screenshot on failure
 		if _, screenshotErr := page.Screenshot(playwright.PageScreenshotOptions{
 			Path: playwright.String("/tmp/debug_screenshot.png"),
 		}); screenshotErr != nil {
@@ -274,7 +262,6 @@ func (s *Scraper) scrapePricePlaywright(url, cssSelector string) (string, error)
 		return "", fmt.Errorf("element not found with css selector (Playwright): %s", cssSelector)
 	}
 
-	// Get the text content
 	text, err := page.Locator(cssSelector).First().TextContent()
 	if err != nil {
 		return "", fmt.Errorf("could not get text content: %w", err)

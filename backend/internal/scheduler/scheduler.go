@@ -70,7 +70,6 @@ func (s *Scheduler) checkPrices() {
 }
 
 func (s *Scheduler) processItem(id, userID, oldPriceText, productName, pageURL, cssSelector, xpathSelector string) {
-	// Scrape new price using the Scraper (HTTP first, Playwright fallback)
 	newPriceText, err := s.scraper.ScrapePrice(pageURL, cssSelector, xpathSelector)
 	if err != nil {
 		slog.Error("Failed to scrape price", "id", id, "url", pageURL, "error", err)
@@ -92,8 +91,19 @@ func (s *Scheduler) processItem(id, userID, oldPriceText, productName, pageURL, 
 
 	if newPrice < oldPrice {
 		slog.Info("Price drop detected!", "product", productName, "old", oldPrice, "new", newPrice)
+
+		if err := s.updateTrackedItemPrice(id, newPriceText); err != nil {
+			slog.Error("Failed to update tracked item price", "id", id, "error", err)
+		}
+
 		if err := s.sendNotification(userID, productName, oldPriceText, newPriceText, id); err != nil {
 			slog.Error("Failed to send notification", "error", err)
+		}
+	} else if newPrice > oldPrice {
+		slog.Info("Price increase detected!", "product", productName, "old", oldPrice, "new", newPrice)
+
+		if err := s.updateTrackedItemPrice(id, newPriceText); err != nil {
+			slog.Error("Failed to update tracked item price", "id", id, "error", err)
 		}
 	} else {
 		slog.Info("No price drop", "product", productName, "old", oldPrice, "new", newPrice)
@@ -105,9 +115,19 @@ func (s *Scheduler) sendNotification(userID, productName, oldPrice, newPrice, pr
 	message := fmt.Sprintf("Good news! The price for '%s' dropped from %s to %s.", productName, oldPrice, newPrice)
 
 	_, err := s.db.Exec(`
-		INSERT INTO notifications (user_id, title, message, type, product_id)
-		VALUES ($1, $2, $3, 'price_drop', $4)
-	`, userID, title, message, productID)
+		INSERT INTO notifications (user_id, title, message, type, product_id, old_price, new_price, is_read)
+		VALUES ($1, $2, $3, 'price_drop', $4, $5, $6, false)
+	`, userID, title, message, productID, oldPrice, newPrice)
+
+	return err
+}
+
+func (s *Scheduler) updateTrackedItemPrice(itemID, newPrice string) error {
+	_, err := s.db.Exec(`
+		UPDATE tracked_items 
+		SET price_text = $1 
+		WHERE id = $2
+	`, newPrice, itemID)
 
 	return err
 }

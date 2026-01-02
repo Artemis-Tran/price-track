@@ -24,6 +24,7 @@
         margin: 0;
         font-size: 20px;
         font-weight: 600;
+        white-space: nowrap;
       }
       button {
         border-radius: 8px;
@@ -34,6 +35,7 @@
         cursor: pointer;
         transition: all 0.2s ease-in-out;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        white-space: nowrap;
       }
       #startPickerButton {
         background-color: #FEDBD0;
@@ -129,6 +131,7 @@
         border: 1px solid #e0e0e0;
         transition: all 0.2s;
         box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        position: relative;
       }
       .tracked-item:hover {
         box-shadow: 0 5px 15px rgba(0,0,0,0.08);
@@ -177,6 +180,148 @@
       .delete-btn:hover svg {
         fill: #d9534f;
         transform: scale(1.1);
+      }
+      
+      /* Notification Bell Styles */
+      .notification-bell {
+        position: relative;
+        cursor: pointer;
+        padding: 10px;
+        background: #eee;
+        border: none;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .notification-bell:hover {
+        background: #e0e0e0;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .notification-bell svg {
+        width: 16px;
+        height: 16px;
+        fill: #555;
+      }
+      .notification-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: #d9534f;
+        color: white;
+        border-radius: 50%;
+        font-size: 10px;
+        font-weight: 600;
+        min-width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+      }
+      
+      /* Notification Dropdown */
+      .notification-dropdown {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 8px);
+        width: 280px;
+        max-height: 320px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        z-index: 1000;
+        overflow: hidden;
+        display: none;
+      }
+      .notification-dropdown.open {
+        display: block;
+      }
+      .notification-dropdown-header {
+        padding: 12px 16px;
+        font-weight: 600;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+        color: #333;
+      }
+      .notification-list {
+        max-height: 260px;
+        overflow-y: auto;
+      }
+      .notification-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .notification-item:hover {
+        background: #f9f9f9;
+      }
+      .notification-item.unread {
+        background: #fef6f4;
+      }
+      .notification-item.unread:hover {
+        background: #fde8e4;
+      }
+      .notification-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+        margin-bottom: 4px;
+      }
+      .notification-message {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+      }
+      .notification-time {
+        font-size: 11px;
+        color: #999;
+        margin-top: 4px;
+      }
+      .notification-empty {
+        padding: 24px 16px;
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+      }
+      
+      /* Price Drop Indicator */
+      .price-drop-indicator {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        width: 22px;
+        height: 22px;
+        background: #d9534f;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+        animation: bounce 2s ease-in-out infinite;
+        box-shadow: 0 2px 8px rgba(217, 83, 79, 0.4);
+      }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-4px); }
+      }
+      
+      /* Price with strikethrough */
+      .old-price {
+        text-decoration: line-through;
+        color: #999;
+        font-size: 12px;
+        font-weight: 500;
+        margin-right: 6px;
+      }
+      .new-price {
+        color: #28a745;
+        font-weight: 700;
+        font-size: 16px;
       }
       .loader {
         width: 48px;
@@ -270,22 +415,26 @@
     <!-- Main App Container -->
     <div id="mainContainer" class="hidden">
         <div class="header">
-        <h3>Price Tracker</h3>
+                <h3>Scrooge</h3>
         <div style="display: flex; gap: 8px; align-items: center;">
              <button id="startPickerButton">Select Price</button>
+             <div id="notificationContainer" style="position: relative;">
+               <button id="notificationBell" class="notification-bell" title="Notifications">
+                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                 <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+               </button>
+               <div id="notificationDropdown" class="notification-dropdown">
+                 <div class="notification-dropdown-header">Notifications</div>
+                 <div id="notificationList" class="notification-list"></div>
+               </div>
+             </div>
              <button id="logoutButton" title="Logout">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
              </button>
         </div>
         </div>
-
         <div class="content">
-        <div class="row">
-            <div class="input-group" style="width: 100%;">
-                <input type="text" id="userNotesInput" placeholder="Add notes..." />
-            </div>
-        </div>
-        
+      
         <div class="row">
             <span id="statusText"></span>
         </div>

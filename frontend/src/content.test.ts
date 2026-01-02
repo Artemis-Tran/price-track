@@ -56,18 +56,18 @@ describe('getCssSelector Robustness', () => {
     it('should use itemprop for extra stability', () => {
          document.body.innerHTML = `
             <div class="product-info-main">
-                <div class="price-box">
-                    <span class="price" itemprop="price">99.00</span>
+                <div class="details-box">
+                    <span class="name" itemprop="name">Product Name</span>
                 </div>
             </div>
         `;
-        const el = document.querySelector('[itemprop="price"]');
+        const el = document.querySelector('[itemprop="name"]');
         if(!el) throw new Error("Setup failed");
 
         const selector = getCssSelector(el);
         console.log('Itemprop Selector:', selector);
         
-        expect(selector).toContain('itemprop="price"');
+        expect(selector).toContain('itemprop="name"');
         expect(document.querySelector(selector)).toBe(el);
     });
 });

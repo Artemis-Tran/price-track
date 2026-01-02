@@ -20,3 +20,22 @@ export type RuntimeMessage =
   | { type: "PRICE_PICKED"; payload: PricePickPayload }
   | { type: "PRICE_PICK_CANCELLED" }
   | { type: "TRACKED_ITEM_SAVED"; item: TrackedItem };
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'price_drop' | string;
+  productId?: string;
+  oldPrice?: string;
+  newPrice?: string;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
+}
+
+export interface TrackedItemWithDrop extends TrackedItem {
+  hasUnreadPriceDrop?: boolean;
+  previousPrice?: string;
+}

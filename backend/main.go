@@ -31,6 +31,20 @@ type TrackedItem struct {
 	SavedAtISO       string `json:"savedAtIso"`
 }
 
+type Notification struct {
+	ID        string  `json:"id"`
+	UserID    string  `json:"userId"`
+	Title     string  `json:"title"`
+	Message   string  `json:"message"`
+	Type      string  `json:"type"`
+	ProductID *string `json:"productId,omitempty"`
+	OldPrice  *string `json:"oldPrice,omitempty"`
+	NewPrice  *string `json:"newPrice,omitempty"`
+	IsRead    bool    `json:"isRead"`
+	CreatedAt string  `json:"createdAt"`
+	ReadAt    *string `json:"readAt,omitempty"`
+}
+
 var db *sql.DB
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
@@ -249,6 +263,104 @@ func itemHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
+func notificationsHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(userIDKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	rows, err := db.Query(`
+		SELECT id, user_id, title, message, type, product_id, old_price, new_price, is_read, created_at, read_at
+		FROM notifications
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`, userID)
+	if err != nil {
+		slog.Error("Failed to query notifications", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	notifications := []Notification{}
+	for rows.Next() {
+		var n Notification
+		var productID, oldPrice, newPrice sql.NullString
+		var isRead sql.NullBool
+		var createdAt sql.NullTime
+		var readAt sql.NullTime
+
+		if err := rows.Scan(&n.ID, &n.UserID, &n.Title, &n.Message, &n.Type, &productID, &oldPrice, &newPrice, &isRead, &createdAt, &readAt); err != nil {
+			slog.Error("Failed to scan notification", "error", err)
+			continue
+		}
+
+		if productID.Valid {
+			n.ProductID = &productID.String
+		}
+		if oldPrice.Valid {
+			n.OldPrice = &oldPrice.String
+		}
+		if newPrice.Valid {
+			n.NewPrice = &newPrice.String
+		}
+		n.IsRead = isRead.Valid && isRead.Bool
+		if createdAt.Valid {
+			n.CreatedAt = createdAt.Time.Format(time.RFC3339)
+		}
+		if readAt.Valid {
+			formatted := readAt.Time.Format(time.RFC3339)
+			n.ReadAt = &formatted
+		}
+
+		notifications = append(notifications, n)
+	}
+
+	slog.Info("Returning notifications", "count", len(notifications), "user_id", userID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(notifications)
+}
+
+func markNotificationReadHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(userIDKey).(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "PATCH" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := r.PathValue("id")
+
+	result, err := db.Exec(`
+		UPDATE notifications 
+		SET read_at = NOW(), is_read = true 
+		WHERE id = $1 AND user_id = $2 AND is_read = false
+	`, id, userID)
+	if err != nil {
+		slog.Error("Failed to mark notification read", "id", id, "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		// Either not found or already read - either way, return success
+		slog.Info("Notification already read or not found", "id", id)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
@@ -284,6 +396,8 @@ func main() {
 	// Update chain to include AuthMiddleware
 	http.HandleFunc("/items", Chain(itemsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 	http.HandleFunc("/items/{id}", Chain(itemHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
+	http.HandleFunc("/notifications", Chain(notificationsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
+	http.HandleFunc("/notifications/{id}/read", Chain(markNotificationReadHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 
 	port := ":8081"
 	slog.Info("Server starting", "port", port)

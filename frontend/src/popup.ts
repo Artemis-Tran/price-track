@@ -1,6 +1,7 @@
 
-import type { RuntimeMessage, TrackedItem } from "./types";
+import type { RuntimeMessage, TrackedItem, Notification } from "./types";
 import { signIn, signUp, signOut, getSession } from "./auth";
+import { fetchNotifications, markNotificationRead, getUnreadNotifications, getUnreadPriceDropByProduct, formatNotificationTime } from "./notifications";
 
 // UI References
 const authContainer = document.getElementById("authContainer") as HTMLDivElement;
@@ -27,8 +28,16 @@ const userNotesInput = document.getElementById("userNotesInput") as HTMLInputEle
 const trackedItemsList = document.getElementById("trackedItemsList") as HTMLDivElement | null;
 const clearAllButton = document.getElementById("clearAllButton") as HTMLButtonElement | null;
 
+// Notification UI References
+const notificationBell = document.getElementById("notificationBell") as HTMLButtonElement | null;
+const notificationDropdown = document.getElementById("notificationDropdown") as HTMLDivElement | null;
+const notificationList = document.getElementById("notificationList") as HTMLDivElement | null;
+const notificationBadge = document.getElementById("notificationBadge") as HTMLSpanElement | null;
+
 // State
 let authToken: string | undefined;
+let notifications: Notification[] = [];
+let unreadPriceDropByProduct: Map<string, Notification> = new Map();
 
 async function updateUIState() {
   const { session } = await getSession();
@@ -36,12 +45,61 @@ async function updateUIState() {
     authToken = session.access_token;
     authContainer.classList.add("hidden");
     mainContainer.classList.remove("hidden");
+    await loadNotifications();
     renderTrackedItems();
   } else {
     authToken = undefined;
     authContainer.classList.remove("hidden");
     mainContainer.classList.add("hidden");
   }
+}
+
+async function loadNotifications() {
+  if (!authToken) return;
+  
+  try {
+    notifications = await fetchNotifications(authToken);
+    unreadPriceDropByProduct = getUnreadPriceDropByProduct(notifications);
+    renderNotifications();
+  } catch (err) {
+    console.error("Failed to load notifications:", err);
+    notifications = [];
+    unreadPriceDropByProduct = new Map();
+  }
+}
+
+function renderNotifications() {
+  if (!notificationList || !notificationBadge) return;
+  
+  const unreadCount = getUnreadNotifications(notifications).length;
+  
+  // Update badge
+  if (unreadCount > 0) {
+    notificationBadge.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
+    notificationBadge.style.display = "flex";
+  } else {
+    notificationBadge.style.display = "none";
+  }
+  
+  // Render notification list
+  if (notifications.length === 0) {
+    notificationList.innerHTML = '<div class="notification-empty">No notifications yet</div>';
+    return;
+  }
+  
+  notificationList.innerHTML = notifications.map(n => `
+    <div class="notification-item ${n.isRead ? '' : 'unread'}" data-id="${n.id}">
+      <div class="notification-title">${escapeHtml(n.title)}</div>
+      <div class="notification-message">${escapeHtml(n.message)}</div>
+      <div class="notification-time">${formatNotificationTime(n.createdAt)}</div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Auth Handlers
@@ -164,7 +222,7 @@ async function renderTrackedItems() {
   const currentScrollTop = trackedItemsList.scrollTop; // Save scroll position
 
   try {
-    const res = await authenticatedFetch("http://localhost:8080/items");
+    const res = await authenticatedFetch("http://localhost:8081/items");
     if (!res.ok) {
         if (res.status === 401) {
             await signOut();
@@ -212,18 +270,36 @@ async function renderTrackedItems() {
     const itemElement = document.createElement("div");
     itemElement.className = "tracked-item";
     
+    // Check for price drop notification
+    const priceDropNotification = unreadPriceDropByProduct.get(item.id);
+    const hasPriceDrop = !!priceDropNotification;
+    
     // Safety check for image URL
     // Use loading="lazy" for performance
     const imgHtml = item.imageUrl 
       ? `<img class="thumb" src="${item.imageUrl}" alt="Product Image" loading="lazy" />` 
       : `<div class="thumb" style="display: flex; align-items: center; justify-content: center; color: #cbd5e1;">📷</div>`;
+    
+    // Price drop indicator HTML
+    const priceDropIndicator = hasPriceDrop 
+      ? '<div class="price-drop-indicator" title="Price dropped!">!</div>' 
+      : '';
+    
+    // Use oldPrice and newPrice from notification if available
+    let priceHtml = `<span class="item-price">${escapeHtml(item.priceText)}</span>`;
+    if (hasPriceDrop && priceDropNotification) {
+      if (priceDropNotification.oldPrice && priceDropNotification.newPrice) {
+        priceHtml = `<span class="old-price">${escapeHtml(priceDropNotification.oldPrice)}</span><span class="new-price">${escapeHtml(priceDropNotification.newPrice)}</span>`;
+      }
+    }
 
     itemElement.innerHTML = `
+      ${priceDropIndicator}
       <div class="item-info">
         ${imgHtml}
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <a href="${item.pageUrl}" target="_blank" title="${item.productName || "Untitled"}">${item.productName || "Untitled"}</a>
-          <span class="item-price">${item.priceText}</span>
+          ${priceHtml}
         </div>
       </div>
       <button class="delete-btn" data-id="${item.id}" title="Stop tracking">
@@ -351,5 +427,47 @@ function setupSmoothScroll(container: HTMLElement) {
   }
   
   if (trackedItemsList) setupSmoothScroll(trackedItemsList);
+
+  // Notification Bell Toggle
+  notificationBell?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    notificationDropdown?.classList.toggle("open");
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!notificationDropdown?.contains(target) && !notificationBell?.contains(target)) {
+      notificationDropdown?.classList.remove("open");
+    }
+  });
+
+  // Mark notification as read on click
+  notificationList?.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const notificationItem = target.closest(".notification-item") as HTMLElement | null;
+    
+    if (notificationItem && notificationItem.classList.contains("unread")) {
+      const notificationId = notificationItem.dataset.id;
+      if (notificationId && authToken) {
+        try {
+          await markNotificationRead(authToken, notificationId);
+          notificationItem.classList.remove("unread");
+          
+          // Update local state and re-render
+          const notification = notifications.find(n => n.id === notificationId);
+          if (notification) {
+            notification.isRead = true;
+            notification.readAt = new Date().toISOString();
+          }
+          unreadPriceDropByProduct = getUnreadPriceDropByProduct(notifications);
+          renderNotifications();
+          renderTrackedItems(); // Refresh items to remove price drop indicator
+        } catch (err) {
+          console.error("Failed to mark notification as read:", err);
+        }
+      }
+    }
+  });
   
   document.addEventListener("DOMContentLoaded", updateUIState);

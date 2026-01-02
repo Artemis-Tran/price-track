@@ -97,14 +97,15 @@ export function getCssSelector(element: Element): string {
     for (const attr of stableAttributes) {
       if (current.hasAttribute(attr)) {
         const val = current.getAttribute(attr);
-        if (val) {
+        // Skip attribute values that look like prices (contain currency symbols or "price")
+        if (val && !/[$€£¥₹]|\bprice\b/i.test(val)) {
           selector += `[${attr}="${cssEscapeSimple(val)}"]`;
         }
       }
     }
 
     const classList = Array.from(current.classList || []).filter(
-      (c) => c && c.length <= 40 && !/^[0-9]+$/.test(c) && !/^[a-z0-9]{20,}$/.test(c)
+      (c) => c && c.length <= 40 && !/^[0-9]+$/.test(c) && !/^[a-z0-9]{20,}$/.test(c) && !c.includes("--")
     );
     if (classList.length) {
       selector += "." + classList.map(cssEscapeSimple).join(".");
