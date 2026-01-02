@@ -6,7 +6,14 @@
     "default_title": "Price Tracker",
     "default_popup": "popup.html"
   },
-  "permissions": ["scripting", "activeTab", "tabs", "storage"],
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "tabs",
+    "storage",
+    "notifications",
+    "alarms"
+  ],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js", "type": "module" },
   "icons": {
