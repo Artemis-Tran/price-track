@@ -34,7 +34,7 @@ function createHoverOverlay(): HTMLDivElement {
     width: "0px",
     height: "0px",
     boxSizing: "border-box",
-    transition: "all 60ms ease-out"
+    transition: "all 60ms ease-out",
   } as CSSStyleDeclaration);
   document.documentElement.appendChild(overlay);
   return overlay;
@@ -51,7 +51,7 @@ function updateOverlayForElement(element: Element): void {
     top: `${window.scrollY + rect.top}px`,
     left: `${window.scrollX + rect.left}px`,
     width: `${rect.width}px`,
-    height: `${rect.height}px`
+    height: `${rect.height}px`,
   });
 }
 
@@ -82,7 +82,10 @@ function getXPath(element: Element): string {
     let index = 1;
     let sibling: Node | null = elementNode.previousSibling;
     while (sibling) {
-      if (sibling.nodeType === Node.ELEMENT_NODE && (sibling as Element).nodeName === elementNode.nodeName) {
+      if (
+        sibling.nodeType === Node.ELEMENT_NODE &&
+        (sibling as Element).nodeName === elementNode.nodeName
+      ) {
         index++;
       }
       sibling = sibling.previousSibling;
@@ -93,13 +96,19 @@ function getXPath(element: Element): string {
   return "/" + parts.join("/");
 }
 
-
 /**
  * Checks if a string looks like a valid price.
  * @param text The string to check.
  * @returns True if the string is a valid price, false otherwise.
  */
-import { isValidPrice, extractPriceText, getCssSelector, cssEscapeSimple, isIdUnique, findBestPriceElement } from "./utils";
+import {
+  isValidPrice,
+  extractPriceText,
+  getCssSelector,
+  cssEscapeSimple,
+  isIdUnique,
+  findBestPriceElement,
+} from "./utils";
 
 /**
  * Resolves a URL against the current page's URL.
@@ -120,7 +129,11 @@ function resolveUrlMaybe(url: string | undefined | null): string {
  * @returns The product name and image, or null if not found.
  */
 function parseJsonLdProduct(): { name?: string; image?: string } | null {
-  const scripts = Array.from(document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]'));
+  const scripts = Array.from(
+    document.querySelectorAll<HTMLScriptElement>(
+      'script[type="application/ld+json"]'
+    )
+  );
   for (const script of scripts) {
     try {
       const data = JSON.parse(script.textContent || "null");
@@ -128,8 +141,13 @@ function parseJsonLdProduct(): { name?: string; image?: string } | null {
       const maybeArray = Array.isArray(data) ? data : [data];
       for (const entry of maybeArray) {
         if (!entry || typeof entry !== "object") continue;
-        if (entry["@type"] === "Product" || (Array.isArray(entry["@type"]) && entry["@type"].includes("Product"))) {
-          const image = Array.isArray(entry.image) ? entry.image[0] : entry.image;
+        if (
+          entry["@type"] === "Product" ||
+          (Array.isArray(entry["@type"]) && entry["@type"].includes("Product"))
+        ) {
+          const image = Array.isArray(entry.image)
+            ? entry.image[0]
+            : entry.image;
           return { name: entry.name, image };
         }
       }
@@ -146,7 +164,9 @@ function parseJsonLdProduct(): { name?: string; image?: string } | null {
  * @returns The content of the meta tag.
  */
 function getOgMetaContent(property: string): string {
-  const el = document.querySelector(`meta[property="${property}"], meta[name="${property}"]`);
+  const el = document.querySelector(
+    `meta[property="${property}"], meta[name="${property}"]`
+  );
   return (el && el.getAttribute("content")) || "";
 }
 
@@ -157,12 +177,21 @@ function getOgMetaContent(property: string): string {
  * @returns The container element, or null if not found.
  */
 function findCandidateContainer(element: Element): Element | null {
-  const priorityClasses = ["product", "item", "card", "listing", "entry", "detail"];
+  const priorityClasses = [
+    "product",
+    "item",
+    "card",
+    "listing",
+    "entry",
+    "detail",
+  ];
   let current: Element | null = element;
   let depth = 0;
   while (current && depth < 6) {
     const tag = current.tagName.toLowerCase();
-    const classHit = priorityClasses.some((c) => current!.className && current!.className.toLowerCase().includes(c));
+    const classHit = priorityClasses.some(
+      (c) => current!.className && current!.className.toLowerCase().includes(c)
+    );
     if (classHit || tag === "article" || tag === "li" || tag === "section") {
       return current;
     }
@@ -187,7 +216,9 @@ function pickProductName(element: Element): string {
 
   const container = findCandidateContainer(element) || document.body;
   const nameCandidates = Array.from(
-    container.querySelectorAll<HTMLElement>('h1,h2,h3,h4,[itemprop="name"],.title,.product-title,.product_name')
+    container.querySelectorAll<HTMLElement>(
+      'h1,h2,h3,h4,[itemprop="name"],.title,.product-title,.product_name'
+    )
   );
   for (const node of nameCandidates) {
     const text = (node.innerText || node.textContent || "").trim();
@@ -228,7 +259,9 @@ function pickProductImage(element: Element): string {
   if (ogImage) return resolveUrlMaybe(ogImage);
 
   const container = findCandidateContainer(element) || document.body;
-  const images = Array.from(container.querySelectorAll<HTMLImageElement>("img")).filter((img) => {
+  const images = Array.from(
+    container.querySelectorAll<HTMLImageElement>("img")
+  ).filter((img) => {
     const { width, height } = img.getBoundingClientRect();
     return width >= 40 && height >= 40;
   });
@@ -259,7 +292,9 @@ function pickProductImage(element: Element): string {
  */
 function getOuterHtmlSnippet(element: Element, maxLength = 800): string {
   const html = (element as HTMLElement).outerHTML ?? "";
-  return html.length > maxLength ? html.slice(0, maxLength) + "…(truncated)" : html;
+  return html.length > maxLength
+    ? html.slice(0, maxLength) + "…(truncated)"
+    : html;
 }
 
 /**
@@ -301,7 +336,7 @@ function onClick(event: MouseEvent): void {
     xPath: getXPath(element),
     pageUrl: location.href,
     outerHtmlSnippet: getOuterHtmlSnippet(element),
-    capturedAtIso: new Date().toISOString()
+    capturedAtIso: new Date().toISOString(),
   };
 
   // Debug log to validate selector/xpath correctness while testing
@@ -310,11 +345,14 @@ function onClick(event: MouseEvent): void {
     imageUrl: payload.imageUrl,
     cssSelector: payload.cssSelector,
     xPath: payload.xPath,
-priceText: payload.priceText,
-    pageUrl: payload.pageUrl
+    priceText: payload.priceText,
+    pageUrl: payload.pageUrl,
   });
 
-  chrome.runtime.sendMessage({ type: "PRICE_PICKED", payload } as RuntimeMessage);
+  chrome.runtime.sendMessage({
+    type: "PRICE_PICKED",
+    payload,
+  } as RuntimeMessage);
 }
 
 /**
@@ -326,7 +364,9 @@ function onKeyDown(event: KeyboardEvent): void {
   if (event.key === "Escape") {
     event.preventDefault();
     cleanupPicker();
-    chrome.runtime.sendMessage({ type: "PRICE_PICK_CANCELLED" } as RuntimeMessage);
+    chrome.runtime.sendMessage({
+      type: "PRICE_PICK_CANCELLED",
+    } as RuntimeMessage);
   }
 }
 
@@ -353,19 +393,26 @@ function cleanupPicker(): void {
   document.removeEventListener("mousemove", onMouseMove, true);
   document.removeEventListener("click", onClick, true);
   document.removeEventListener("keydown", onKeyDown, true);
-  if (hoverOverlay?.parentNode) hoverOverlay.parentNode.removeChild(hoverOverlay);
+  if (hoverOverlay?.parentNode)
+    hoverOverlay.parentNode.removeChild(hoverOverlay);
   hoverOverlay = null;
 }
 
-if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
-  chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResponse) => {
-    if (message.type === "PING_PRICE_PICKER") {
-      sendResponse?.({ ok: true });
+if (
+  typeof chrome !== "undefined" &&
+  chrome.runtime &&
+  chrome.runtime.onMessage
+) {
+  chrome.runtime.onMessage.addListener(
+    (message: RuntimeMessage, _sender, sendResponse) => {
+      if (message.type === "PING_PRICE_PICKER") {
+        sendResponse?.({ ok: true });
+      }
+      if (message.type === "START_PRICE_PICK") {
+        startPicker();
+      }
+      // Return true if you plan to call sendResponse asynchronously
+      return false;
     }
-    if (message.type === "START_PRICE_PICK") {
-      startPicker();
-    }
-    // Return true if you plan to call sendResponse asynchronously
-    return false;
-  });
+  );
 }

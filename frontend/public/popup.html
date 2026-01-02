@@ -5,7 +5,14 @@
     <title>Price Tracker</title>
     <style>
       body {
-        font: 14px "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Helvetica Neue", Arial, sans-serif;
+        font:
+          14px "Segoe UI",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Roboto",
+          "Helvetica Neue",
+          Arial,
+          sans-serif;
         margin: 0;
         width: 350px;
         background-color: #f4f7f9;
@@ -34,11 +41,11 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease-in-out;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         white-space: nowrap;
       }
       #startPickerButton {
-        background-color: #FEDBD0;
+        background-color: #fedbd0;
         color: #442c2e;
         border: none;
       }
@@ -112,15 +119,15 @@
         width: 6px;
       }
       #trackedItemsList::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: #f1f1f1;
         border-radius: 3px;
       }
       #trackedItemsList::-webkit-scrollbar-thumb {
-        background: #ccc; 
+        background: #ccc;
         border-radius: 3px;
       }
       #trackedItemsList::-webkit-scrollbar-thumb:hover {
-        background: #bbb; 
+        background: #bbb;
       }
       .tracked-item {
         display: flex;
@@ -130,11 +137,11 @@
         border-radius: 10px;
         border: 1px solid #e0e0e0;
         transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         position: relative;
       }
       .tracked-item:hover {
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
       }
       .thumb {
         width: 52px;
@@ -181,7 +188,7 @@
         fill: #d9534f;
         transform: scale(1.1);
       }
-      
+
       /* Notification Bell Styles */
       .notification-bell {
         position: relative;
@@ -220,7 +227,7 @@
         justify-content: center;
         padding: 0 4px;
       }
-      
+
       /* Notification Dropdown */
       .notification-dropdown {
         position: absolute;
@@ -230,7 +237,7 @@
         max-height: 320px;
         background: white;
         border-radius: 10px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
         z-index: 1000;
         overflow: hidden;
         display: none;
@@ -286,7 +293,7 @@
         color: #999;
         font-size: 13px;
       }
-      
+
       /* Price Drop Indicator */
       .price-drop-indicator {
         position: absolute;
@@ -306,10 +313,15 @@
         box-shadow: 0 2px 8px rgba(217, 83, 79, 0.4);
       }
       @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-4px); }
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-4px);
+        }
       }
-      
+
       /* Price with strikethrough */
       .old-price {
         text-decoration: line-through;
@@ -328,13 +340,13 @@
         height: 48px;
         border-radius: 50%;
         display: inline-block;
-        border-top: 4px solid #FFF;
+        border-top: 4px solid #fff;
         border-right: 4px solid transparent;
         box-sizing: border-box;
         animation: rotation 1s linear infinite;
       }
       .loader::after {
-        content: '';  
+        content: "";
         box-sizing: border-box;
         position: absolute;
         left: 0;
@@ -342,18 +354,26 @@
         width: 48px;
         height: 48px;
         border-radius: 50%;
-        border-left: 4px solid #FF3D00;
+        border-left: 4px solid #ff3d00;
         border-bottom: 4px solid transparent;
         animation: rotation 0.5s linear infinite reverse;
       }
       @keyframes rotation {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
-      
+
       /* Simple Auth Styles to match base */
-      .hidden { display: none !important; }
-      .input-group { margin-bottom: 12px; }
+      .hidden {
+        display: none !important;
+      }
+      .input-group {
+        margin-bottom: 12px;
+      }
       input {
         width: 100%;
         padding: 8px;
@@ -363,11 +383,11 @@
         box-sizing: border-box;
       }
       input:focus {
-        border-color: #FEDBD0;
+        border-color: #fedbd0;
         outline: none;
       }
       .primary-btn {
-        background-color: #FEDBD0;
+        background-color: #fedbd0;
         color: #442c2e;
         border: none;
         width: 100%;
@@ -377,23 +397,25 @@
         box-shadow: 0 4px 12px rgba(254, 219, 208, 0.4);
       }
       .text-link {
-          color: #442c2e;
-          text-decoration: none;
-          font-weight: 600;
+        color: #442c2e;
+        text-decoration: none;
+        font-weight: 600;
       }
       .text-link:hover {
-          text-decoration: underline;
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <!-- Auth Container -->
-    <div id="authContainer" class="content hidden" style="padding-top: 40px;">
-      <div style="text-align: center; margin-bottom: 24px;">
+    <div id="authContainer" class="content hidden" style="padding-top: 40px">
+      <div style="text-align: center; margin-bottom: 24px">
         <h3>Login</h3>
-        <div style="color: #666; margin-top: 8px;">Sign in to sync your prices</div>
+        <div style="color: #666; margin-top: 8px">
+          Sign in to sync your prices
+        </div>
       </div>
-      
+
       <form id="authForm">
         <div class="input-group">
           <input type="email" id="emailInput" placeholder="Email address" />
@@ -401,52 +423,85 @@
         <div class="input-group">
           <input type="password" id="passwordInput" placeholder="Password" />
         </div>
-        
-        <button type="submit" id="authButton" class="primary-btn">Sign In</button>
+
+        <button type="submit" id="authButton" class="primary-btn">
+          Sign In
+        </button>
       </form>
-      
-      <div style="text-align: center; margin-top: 16px; font-size: 13px;">
-        <a href="#" id="toggleAuthMode" class="text-link">Need an account? Sign Up</a>
+
+      <div style="text-align: center; margin-top: 16px; font-size: 13px">
+        <a href="#" id="toggleAuthMode" class="text-link"
+          >Need an account? Sign Up</a
+        >
       </div>
-      
-      <div id="authMessage" style="text-align: center; margin-top: 16px; font-size: 13px; color: #d9534f; min-height: 20px;"></div>
+
+      <div
+        id="authMessage"
+        style="
+          text-align: center;
+          margin-top: 16px;
+          font-size: 13px;
+          color: #d9534f;
+          min-height: 20px;
+        "
+      ></div>
     </div>
 
     <!-- Main App Container -->
     <div id="mainContainer" class="hidden">
-        <div class="header">
-                <h3>Scrooge</h3>
-        <div style="display: flex; gap: 8px; align-items: center;">
-             <button id="startPickerButton">Select Price</button>
-             <div id="notificationContainer" style="position: relative;">
-               <button id="notificationBell" class="notification-bell" title="Notifications">
-                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-                 <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-               </button>
-               <div id="notificationDropdown" class="notification-dropdown">
-                 <div class="notification-dropdown-header">Notifications</div>
-                 <div id="notificationList" class="notification-list"></div>
-               </div>
-             </div>
-             <button id="logoutButton" title="Logout">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-             </button>
+      <div class="header">
+        <img
+          src="assets/logo.png"
+          alt="PriceTrack"
+          style="height: 50px; width: auto"
+        />
+        <div style="display: flex; gap: 8px; align-items: center">
+          <div id="notificationContainer" style="position: relative">
+            <button
+              id="notificationBell"
+              class="notification-bell"
+              title="Notifications"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+                />
+              </svg>
+              <span
+                id="notificationBadge"
+                class="notification-badge"
+                style="display: none"
+                >0</span
+              >
+            </button>
+            <div id="notificationDropdown" class="notification-dropdown">
+              <div class="notification-dropdown-header">Notifications</div>
+              <div id="notificationList" class="notification-list"></div>
+            </div>
+          </div>
+          <button id="logoutButton" title="Logout">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path
+                d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+              />
+            </svg>
+          </button>
         </div>
-        </div>
-        <div class="content">
-      
+      </div>
+      <div class="content">
+        <button id="startPickerButton">Select Price</button>
         <div class="row">
-            <span id="statusText"></span>
+          <span id="statusText"></span>
         </div>
 
         <div id="trackedItemsContainer">
-            <div class="tracked-items-header">
+          <div class="tracked-items-header">
             <h4>Tracked Items</h4>
             <button id="clearAllButton">Clear All</button>
-            </div>
-            <div id="trackedItemsList"></div>
+          </div>
+          <div id="trackedItemsList"></div>
         </div>
-        </div>
+      </div>
     </div>
 
     <script type="module" src="popup.js"></script>

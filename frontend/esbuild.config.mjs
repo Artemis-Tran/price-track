@@ -19,7 +19,7 @@ function copyDir(srcDir, destDir) {
 
 function copyStaticOnce() {
   copyDir("public", "dist");
-  copyDir("assets", "dist/assets");
+
   copyFileSync("src/manifest.json", "dist/manifest.json");
   console.log("[static] copied public/, assets/ and manifest.json");
 }
@@ -28,9 +28,6 @@ function watchStatic() {
   // Simple, dependency-free watcher; re-copies on any change
   fsWatch("public", { recursive: true }, (_event, _filename) => {
     try { copyDir("public", "dist"); console.log("[static] re-copied public/"); } catch {}
-  });
-  fsWatch("assets", { recursive: true }, (_event, _filename) => {
-    try { copyDir("assets", "dist/assets"); console.log("[static] re-copied assets/"); } catch {}
   });
   fsWatch("src/manifest.json", {}, () => {
     try { copyFileSync("src/manifest.json", "dist/manifest.json"); console.log("[static] re-copied manifest.json"); } catch {}
