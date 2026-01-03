@@ -1,6 +1,7 @@
 .env
 .venv
 dist
+dist.zip
 node_modules
 # Go
 price-track-backend
