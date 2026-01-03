@@ -1,5 +1,12 @@
 import esbuild from "esbuild";
-import { rmSync, mkdirSync, copyFileSync, readdirSync, statSync, watch as fsWatch } from "node:fs";
+import {
+  rmSync,
+  mkdirSync,
+  copyFileSync,
+  readdirSync,
+  statSync,
+  watch as fsWatch,
+} from "node:fs";
 import { join } from "node:path";
 import { config } from "dotenv";
 
@@ -27,10 +34,16 @@ function copyStaticOnce() {
 function watchStatic() {
   // Simple, dependency-free watcher; re-copies on any change
   fsWatch("public", { recursive: true }, (_event, _filename) => {
-    try { copyDir("public", "dist"); console.log("[static] re-copied public/"); } catch {}
+    try {
+      copyDir("public", "dist");
+      console.log("[static] re-copied public/");
+    } catch {}
   });
   fsWatch("src/manifest.json", {}, () => {
-    try { copyFileSync("src/manifest.json", "dist/manifest.json"); console.log("[static] re-copied manifest.json"); } catch {}
+    try {
+      copyFileSync("src/manifest.json", "dist/manifest.json");
+      console.log("[static] re-copied manifest.json");
+    } catch {}
   });
 }
 
@@ -39,9 +52,9 @@ copyStaticOnce();
 
 const buildOptions = {
   entryPoints: {
-    "popup": "src/popup.ts",
-    "content": "src/content.ts",
-    "background": "src/background.ts"
+    popup: "src/popup.ts",
+    content: "src/content.ts",
+    background: "src/background.ts",
   },
   bundle: true,
   sourcemap: true,
@@ -52,8 +65,13 @@ const buildOptions = {
   logLevel: "info",
   define: {
     "process.env.SUPABASE_URL": JSON.stringify(process.env.SUPABASE_URL),
-    "process.env.SUPABASE_ANON_KEY": JSON.stringify(process.env.SUPABASE_ANON_KEY),
-  }
+    "process.env.SUPABASE_ANON_KEY": JSON.stringify(
+      process.env.SUPABASE_ANON_KEY
+    ),
+    "process.env.API_BASE_URL": JSON.stringify(
+      process.env.API_BASE_URL || "http://localhost:8081"
+    ),
+  },
 };
 
 if (isWatch) {

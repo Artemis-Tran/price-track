@@ -1,0 +1,18 @@
+# Git
+.git
+.gitignore
+
+# Environment variables (secrets should be injected at runtime)
+.env
+
+# Local binaries and temp files
+main
+tmp/
+bin/
+
+# OS specific checks
+.DS_Store
+Thumbs.db
+
+# Frontend stuff (if accidentally in backend context)
+node_modules/

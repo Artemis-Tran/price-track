@@ -130,7 +130,7 @@ chrome.runtime.onMessage.addListener(
               console.warn("No auth token found, request might fail");
             }
 
-            const res = await fetch("http://localhost:8080/items", {
+            const res = await fetch(`${process.env.API_BASE_URL}/items`, {
               method: "POST",
               headers,
               body: JSON.stringify(item),
