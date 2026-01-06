@@ -27,10 +27,10 @@ func (s *Scheduler) Start() {
 		slog.Warn("Failed to start Playwright scraper, will use HTTP only", "error", err)
 	}
 
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
-	slog.Info("Scheduler started, checking prices every 1 hour")
+	slog.Info("Scheduler started, checking prices every day")
 
 	// Trigger an immediate check in a goroutine so we don't block start
 	go s.checkPrices()
