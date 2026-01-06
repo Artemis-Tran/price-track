@@ -396,7 +396,7 @@ func main() {
 	// Update chain to include AuthMiddleware
 	http.HandleFunc("/items", Chain(itemsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 	http.HandleFunc("/items/{id}", Chain(itemHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
-	http.HandleFunc("/notifications", Chain(notificationsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
+	http.HandleFunc("/notifications", Chain(notificationsHandler, AuthMiddleware, CORSMiddleware))
 	http.HandleFunc("/notifications/{id}/read", Chain(markNotificationReadHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))
 
 	port := ":8081"
