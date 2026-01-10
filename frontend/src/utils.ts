@@ -18,7 +18,11 @@ export function isValidPrice(text: string): boolean {
  * @returns The extracted price text.
  */
 export function extractPriceText(element: Element): string {
-  const raw = ((element as HTMLElement).innerText || element.textContent || "").trim();
+  const raw = (
+    (element as HTMLElement).innerText ||
+    element.textContent ||
+    ""
+  ).trim();
   const symbolMatch = raw.match(PRICE_REGEX);
   if (symbolMatch?.[0]) {
     return symbolMatch[0].replace(/\s+/g, "");
@@ -82,7 +86,7 @@ export function getCssSelector(element: Element): string {
     "alt",
     "placeholder",
     "data-id",
-    "data-automation-id"
+    "data-automation-id",
   ];
 
   while (current && depth < 10) {
@@ -93,7 +97,7 @@ export function getCssSelector(element: Element): string {
 
     const tag = current.tagName.toLowerCase();
     let selector = tag;
-    
+
     for (const attr of stableAttributes) {
       if (current.hasAttribute(attr)) {
         const val = current.getAttribute(attr);
@@ -105,7 +109,12 @@ export function getCssSelector(element: Element): string {
     }
 
     const classList = Array.from(current.classList || []).filter(
-      (c) => c && c.length <= 40 && !/^[0-9]+$/.test(c) && !/^[a-z0-9]{20,}$/.test(c) && !c.includes("--")
+      (c) =>
+        c &&
+        c.length <= 40 &&
+        !/^[0-9]+$/.test(c) &&
+        !/^[a-z0-9]{20,}$/.test(c) &&
+        !c.includes("--")
     );
     if (classList.length) {
       selector += "." + classList.map(cssEscapeSimple).join(".");
@@ -113,43 +122,46 @@ export function getCssSelector(element: Element): string {
 
     const parent: Element | null = current.parentElement;
     let needsNthType = false;
-    
+
     if (parent) {
-      const matchingSiblings = Array.from(parent.children).filter(
-        child => {
-          if (child === current) return true;
-          if (child.tagName.toLowerCase() !== tag) return false;
-          
-          for (const attr of stableAttributes) {
-            if (current!.hasAttribute(attr)) {
-                if (child.getAttribute(attr) !== current!.getAttribute(attr)) return false;
-            }
+      const matchingSiblings = Array.from(parent.children).filter((child) => {
+        if (child === current) return true;
+        if (child.tagName.toLowerCase() !== tag) return false;
+
+        for (const attr of stableAttributes) {
+          if (current!.hasAttribute(attr)) {
+            if (child.getAttribute(attr) !== current!.getAttribute(attr))
+              return false;
           }
-           return classList.every(c => child.classList.contains(c));
         }
-      );
+        return classList.every((c) => child.classList.contains(c));
+      });
 
       if (matchingSiblings.length > 1) {
-         needsNthType = true;
+        needsNthType = true;
       }
     }
 
     if (needsNthType) {
-       const sameTagSiblings = parent ? Array.from(parent.children).filter(c => c.tagName === current!.tagName) : [];
-       const index = sameTagSiblings.indexOf(current) + 1;
-       selector += `:nth-of-type(${index})`;
+      const sameTagSiblings = parent
+        ? Array.from(parent.children).filter(
+            (c) => c.tagName === current!.tagName
+          )
+        : [];
+      const index = sameTagSiblings.indexOf(current) + 1;
+      selector += `:nth-of-type(${index})`;
     }
 
     parts.unshift(selector);
-    
+
     const fullSelector = parts.join(" > ");
-    
+
     try {
-        if (document.querySelectorAll(fullSelector).length === 1) {
-            return fullSelector;
-        }
+      if (document.querySelectorAll(fullSelector).length === 1) {
+        return fullSelector;
+      }
     } catch {
-       // ignore
+      // ignore
     }
 
     current = parent;
@@ -158,7 +170,6 @@ export function getCssSelector(element: Element): string {
 
   return parts.join(" > ");
 }
-
 
 /**
  * Tries to find a better price element by looking at parents.
@@ -175,21 +186,21 @@ export function findBestPriceElement(element: Element): Element {
   // are likely better candidates.
   while (current && depth < 3) {
     if (current.classList.contains("a-price")) {
-        return current;
+      return current;
     }
-    
+
     // Check if parent has more valid price text
     const currentPrice = extractPriceText(best);
     const parentPrice = extractPriceText(current);
-    
+
     if (!isValidPrice(currentPrice) && isValidPrice(parentPrice)) {
-        best = current;
+      best = current;
     } else if (isValidPrice(currentPrice) && isValidPrice(parentPrice)) {
-       // If both are valid, prefer the one that is longer (more likely to be complete)
-       // provided it doesn't become too long (like a whole card)
-       if (parentPrice.length > currentPrice.length && parentPrice.length < 20) {
-           best = current;
-       }
+      // If both are valid, prefer the one that is longer (more likely to be complete)
+      // provided it doesn't become too long (like a whole card)
+      if (parentPrice.length > currentPrice.length && parentPrice.length < 20) {
+        best = current;
+      }
     }
 
     current = current.parentElement;
