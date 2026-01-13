@@ -351,6 +351,12 @@ async function renderTrackedItems() {
       ? '<div class="price-drop-indicator" title="Price dropped!">!</div>'
       : "";
 
+    // Scrape failed indicator
+    const scrapeFailedIndicator =
+      item.lastScrapeStatus === "failed"
+        ? '<span class="scrape-failed-text" style="color:red; font-size: 0.9em; margin-top: 4px; display: block;"><span style="font-size: 1.2em; font-weight: bold; margin-right: 4px;">*</span>Scrape failed, check manually</span>'
+        : "";
+
     // Use oldPrice and newPrice from notification if available
     let priceHtml = `<span class="item-price">${escapeHtml(item.priceText)}</span>`;
     if (hasPriceDrop && priceDropNotification) {
@@ -365,7 +371,10 @@ async function renderTrackedItems() {
         ${imgHtml}
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <a href="${item.pageUrl}" target="_blank" title="${item.productName || "Untitled"}">${item.productName || "Untitled"}</a>
-          ${priceHtml}
+          <div>
+             ${priceHtml}
+          </div>
+          ${scrapeFailedIndicator}
         </div>
       </div>
       <button class="delete-btn" data-id="${item.id}" title="Stop tracking">

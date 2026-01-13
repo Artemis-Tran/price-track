@@ -72,6 +72,9 @@ func (s *Scheduler) processItem(ctx context.Context, id, userID, oldPriceText, p
 	newPriceText, err := s.scraper.ScrapePrice(pageURL, cssSelector, xpathSelector)
 	if err != nil {
 		slog.Error("Failed to scrape price", "id", id, "url", pageURL, "error", err)
+		if updateErr := s.updateTrackedItemStatus(id, "failed"); updateErr != nil {
+			slog.Error("Failed to update scrape status", "id", id, "error", updateErr)
+		}
 		return
 	}
 
@@ -79,13 +82,26 @@ func (s *Scheduler) processItem(ctx context.Context, id, userID, oldPriceText, p
 	oldPrice, err := parsePrice(oldPriceText)
 	if err != nil {
 		slog.Warn("Failed to parse old price", "price", oldPriceText, "error", err)
+		// We scraped successfully but parsing failed. Techincally a success for the scraper part, but maybe we should flag it?
+		// For now, let's mark scraper as success, as the network/selector part worked.
+		if updateErr := s.updateTrackedItemStatus(id, "success"); updateErr != nil {
+			slog.Error("Failed to update scrape status", "id", id, "error", updateErr)
+		}
 		return
 	}
 
 	newPrice, err := parsePrice(newPriceText)
 	if err != nil {
 		slog.Warn("Failed to parse new price", "price", newPriceText, "error", err)
+		if updateErr := s.updateTrackedItemStatus(id, "success"); updateErr != nil {
+			slog.Error("Failed to update scrape status", "id", id, "error", updateErr)
+		}
 		return
+	}
+
+	// Update status to success
+	if updateErr := s.updateTrackedItemStatus(id, "success"); updateErr != nil {
+		slog.Error("Failed to update scrape status", "id", id, "error", updateErr)
 	}
 
 	if newPrice < oldPrice {
@@ -128,6 +144,15 @@ func (s *Scheduler) updateTrackedItemPrice(itemID, newPrice string) error {
 		WHERE id = $2
 	`, newPrice, itemID)
 
+	return err
+}
+
+func (s *Scheduler) updateTrackedItemStatus(itemID, status string) error {
+	_, err := s.db.Exec(`
+		UPDATE tracked_items 
+		SET last_scrape_status = $1 
+		WHERE id = $2
+	`, status, itemID)
 	return err
 }
 

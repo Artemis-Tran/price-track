@@ -27,6 +27,7 @@ type TrackedItem struct {
 	OuterHTMLSnippet string `json:"outerHtmlSnippet"`
 	CapturedAtISO    string `json:"capturedAtIso"`
 	SavedAtISO       string `json:"savedAtIso"`
+	LastScrapeStatus string `json:"lastScrapeStatus"`
 }
 
 type Notification struct {
@@ -144,7 +145,7 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		rows, err := db.Query(`
-			SELECT id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at 
+			SELECT id, price_text, product_name, image_url, css_selector, xpath, page_url, outer_html_snippet, captured_at, saved_at, last_scrape_status
 			FROM tracked_items 
 			WHERE user_id = $1
 			ORDER BY created_at DESC
@@ -160,14 +161,20 @@ func itemsHandler(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var i TrackedItem
 			var capturedAt, savedAt time.Time
+			var lastScrapeStatus sql.NullString
 			if err := rows.Scan(
-				&i.ID, &i.PriceText, &i.ProductName, &i.ImageURL, &i.CSSSelector, &i.XPath, &i.PageURL, &i.OuterHTMLSnippet, &capturedAt, &savedAt,
+				&i.ID, &i.PriceText, &i.ProductName, &i.ImageURL, &i.CSSSelector, &i.XPath, &i.PageURL, &i.OuterHTMLSnippet, &capturedAt, &savedAt, &lastScrapeStatus,
 			); err != nil {
 				slog.Error("Failed to scan item", "error", err)
 				continue
 			}
 			i.CapturedAtISO = capturedAt.Format(time.RFC3339)
 			i.SavedAtISO = savedAt.Format(time.RFC3339)
+			if lastScrapeStatus.Valid {
+				i.LastScrapeStatus = lastScrapeStatus.String
+			} else {
+				i.LastScrapeStatus = "pending"
+			}
 			items = append(items, i)
 		}
 

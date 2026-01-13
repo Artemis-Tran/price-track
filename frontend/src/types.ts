@@ -12,6 +12,7 @@ export type PricePickPayload = {
 export type TrackedItem = PricePickPayload & {
   savedAtIso: string;
   id: string;
+  lastScrapeStatus?: string;
 };
 
 export type RuntimeMessage =
@@ -26,7 +27,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'price_drop' | string;
+  type: "price_drop" | string;
   productId?: string;
   oldPrice?: string;
   newPrice?: string;
