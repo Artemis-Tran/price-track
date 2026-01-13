@@ -88,12 +88,10 @@ func (s *Scraper) ScrapePrice(url, cssSelector, xpathSelector string) (string, e
 		return price, nil
 	}
 
-	if strings.Contains(err.Error(), "element not found") {
-		slog.Info("HTTP scrape failed, trying Playwright", "url", url, "error", err)
-		return s.scrapePricePlaywright(url, cssSelector)
-	}
+	// If HTTP failed (timeout, 403, 429, or selector not found), try Playwright.
+	slog.Info("HTTP scrape failed, trying Playwright", "url", url, "error", err)
+	return s.scrapePricePlaywright(url, cssSelector)
 
-	return "", err
 }
 
 func (s *Scraper) scrapePriceHTTP(url, cssSelector, xpathSelector string) (string, error) {

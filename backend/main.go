@@ -14,8 +14,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-
-	"price-track-backend/internal/scheduler"
 )
 
 type TrackedItem struct {
@@ -389,9 +387,9 @@ func main() {
 	}
 	slog.Info("Connected to database")
 
-	// Start Scheduler
-	sch := scheduler.New(db)
-	go sch.Start()
+	// Scheduler is now run as a separate job (cmd/scraper)
+	// sch := scheduler.New(db)
+	// go sch.Start()
 
 	// Update chain to include AuthMiddleware
 	http.HandleFunc("/items", Chain(itemsHandler, AuthMiddleware, LoggingMiddleware, CORSMiddleware))

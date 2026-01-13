@@ -7,5 +7,7 @@ node_modules
 price-track-backend
 backend/price-track-backend
 backend/migrations
+backend/api
+backend/scraper
 
 .vscode

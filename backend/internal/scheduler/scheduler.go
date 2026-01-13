@@ -1,12 +1,13 @@
 package scheduler
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
 	"regexp"
 	"strconv"
-	"time"
+	"sync"
 )
 
 type Scheduler struct {
@@ -21,34 +22,18 @@ func New(db *sql.DB) *Scheduler {
 	}
 }
 
-func (s *Scheduler) Start() {
-	// Start the Playwright scraper (lazy initialization on first use is also fine)
+// CheckAllPrices runs a single pass of price checks for all tracked items.
+// It blocks until all items have been processed or the context is cancelled.
+func (s *Scheduler) CheckAllPrices(ctx context.Context) {
+	// Start Playwright if needed
 	if err := s.scraper.Start(); err != nil {
 		slog.Warn("Failed to start Playwright scraper, will use HTTP only", "error", err)
 	}
+	defer s.scraper.Stop()
 
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
+	slog.Info("Starting price check for all tracked items...")
 
-	slog.Info("Scheduler started, checking prices every day")
-
-	// Trigger an immediate check in a goroutine so we don't block start
-	go s.checkPrices()
-
-	for range ticker.C {
-		s.checkPrices()
-	}
-}
-
-// Stop cleans up resources (call this on application shutdown)
-func (s *Scheduler) Stop() {
-	s.scraper.Stop()
-}
-
-func (s *Scheduler) checkPrices() {
-	slog.Info("Checking prices for all tracked items...")
-
-	rows, err := s.db.Query(`
+	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, user_id, price_text, product_name, page_url, css_selector, xpath 
 		FROM tracked_items
 	`)
@@ -58,6 +43,8 @@ func (s *Scheduler) checkPrices() {
 	}
 	defer rows.Close()
 
+	var wg sync.WaitGroup
+
 	for rows.Next() {
 		var id, userID, priceText, productName, pageURL, cssSelector, xpath string
 		if err := rows.Scan(&id, &userID, &priceText, &productName, &pageURL, &cssSelector, &xpath); err != nil {
@@ -65,11 +52,23 @@ func (s *Scheduler) checkPrices() {
 			continue
 		}
 
-		go s.processItem(id, userID, priceText, productName, pageURL, cssSelector, xpath)
+		wg.Add(1)
+		go func(id, userID, priceText, productName, pageURL, cssSelector, xpath string) {
+			defer wg.Done()
+			s.processItem(ctx, id, userID, priceText, productName, pageURL, cssSelector, xpath)
+		}(id, userID, priceText, productName, pageURL, cssSelector, xpath)
 	}
+
+	wg.Wait()
+	slog.Info("Completed price check for all tracked items")
 }
 
-func (s *Scheduler) processItem(id, userID, oldPriceText, productName, pageURL, cssSelector, xpathSelector string) {
+// Stop cleans up resources (call this on application shutdown)
+func (s *Scheduler) Stop() {
+	s.scraper.Stop()
+}
+
+func (s *Scheduler) processItem(ctx context.Context, id, userID, oldPriceText, productName, pageURL, cssSelector, xpathSelector string) {
 	newPriceText, err := s.scraper.ScrapePrice(pageURL, cssSelector, xpathSelector)
 	if err != nil {
 		slog.Error("Failed to scrape price", "id", id, "url", pageURL, "error", err)

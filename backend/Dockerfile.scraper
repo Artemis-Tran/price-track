@@ -16,24 +16,18 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
-# Build the application
-# -o main: name the output binary "main"
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
+# Build the scraper binary
+# We point to the new entry point
+RUN CGO_ENABLED=0 GOOS=linux go build -o scraper ./cmd/scraper/main.go
 
 # Run Stage
-# Use a minimal Alpine image for the API (no browsers needed)
-FROM alpine:latest
+# Use the official Playwright image which has all browser dependencies pre-installed.
+FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 
 WORKDIR /root/
 
-# Install CA certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
 # Copy the binary from the builder stage
-COPY --from=builder /app/main .
-
-# Expose the API port
-EXPOSE 8081
+COPY --from=builder /app/scraper .
 
 # Command to run the executable
-CMD ["./main"]
+CMD ["./scraper"]
