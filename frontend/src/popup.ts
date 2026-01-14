@@ -122,13 +122,15 @@ function renderNotifications() {
   }
 
   // Render notification list
-  if (notifications.length === 0) {
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
+
+  if (unreadNotifications.length === 0) {
     notificationList.innerHTML =
       '<div class="notification-empty">No notifications yet</div>';
     return;
   }
 
-  notificationList.innerHTML = notifications
+  notificationList.innerHTML = unreadNotifications
     .map(
       (n) => `
     <div class="notification-item ${n.isRead ? "" : "unread"}" data-id="${n.id}">

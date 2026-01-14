@@ -283,7 +283,7 @@ func notificationsHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`
 		SELECT id, user_id, title, message, type, product_id, old_price, new_price, is_read, created_at, read_at
 		FROM notifications
-		WHERE user_id = $1
+		WHERE user_id = $1 AND is_read = false
 		ORDER BY created_at DESC
 	`, userID)
 	if err != nil {

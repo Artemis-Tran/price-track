@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/xpath v1.3.5 // indirect
 	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
