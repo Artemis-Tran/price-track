@@ -50,6 +50,37 @@ function watchStatic() {
 rmSync("dist", { recursive: true, force: true });
 copyStaticOnce();
 
+// Validation logic
+let apiBaseUrl = process.env.API_BASE_URL;
+
+if (!isWatch) {
+  // Production build enforcement
+  if (!apiBaseUrl) {
+    console.error(
+      "\x1b[31m%s\x1b[0m", // Red color
+      "Error: API_BASE_URL is not set. It is required for production builds."
+    );
+    process.exit(1);
+  }
+
+  if (!apiBaseUrl.startsWith("https://")) {
+    console.error(
+      "\x1b[31m%s\x1b[0m", // Red color
+      "Error: API_BASE_URL must start with 'https://' for production builds (Chrome Web Store requirement)."
+    );
+    process.exit(1);
+  }
+} else {
+  // Development fallback
+  if (!apiBaseUrl) {
+    apiBaseUrl = "http://localhost:8081";
+    console.log(
+      "\x1b[33m%s\x1b[0m", // Yellow color
+      "Warning: API_BASE_URL not set, defaulting to http://localhost:8081 for development."
+    );
+  }
+}
+
 const buildOptions = {
   entryPoints: {
     popup: "src/popup.ts",
@@ -68,9 +99,7 @@ const buildOptions = {
     "process.env.SUPABASE_ANON_KEY": JSON.stringify(
       process.env.SUPABASE_ANON_KEY
     ),
-    "process.env.API_BASE_URL": JSON.stringify(
-      process.env.API_BASE_URL || "http://localhost:8081"
-    ),
+    "process.env.API_BASE_URL": JSON.stringify(apiBaseUrl),
   },
 };
 
