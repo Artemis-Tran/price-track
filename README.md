@@ -35,7 +35,6 @@ The project is a monorepo consisting of two main parts:
     ```
 
 2.  **Backend Setup:**
-
     - Navigate to the `backend` directory: `cd backend`
     - Install Go dependencies: `go mod tidy`
     - Create a `.env` file and add the following environment variables:
@@ -47,7 +46,6 @@ The project is a monorepo consisting of two main parts:
     - Start the backend server: `go run main.go`
 
 3.  **Frontend Setup:**
-
     - Navigate to the `frontend` directory: `cd ../frontend`
     - Install Node.js dependencies: `npm install`
     - Create a `.env` file with your Supabase credentials:
@@ -80,5 +78,7 @@ To create a production-ready build of the extension, run the following command i
 ```bash
 npm run build
 ```
+
+Note you will need to set the `API_BASE_URL` environment variable to the URL of your backend server. This is required for production builds.
 
 This will create an optimized build in the `dist` directory, which can then be packaged and distributed or uploaded to the Chrome Web Store.
